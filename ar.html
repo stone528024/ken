@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>AR 特效修复版</title>
+    <title>AR 最终修复版</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
     <style>
@@ -15,19 +15,28 @@
             background: black;
         }
 
-        /* --- 关键修复：强制层级关系 --- */
-        /* MindAR 的视频层 */
+        /* === 核心修复：强制定义层级 === */
+        /* 1. 摄像头视频层：必须在最底层 (z-index: 0) */
         video {
-            z-index: 1 !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
         }
 
-        /* A-Frame 的 AR 特效层 */
+        /* 2. AR 特效层：必须在中间层 (z-index: 1) */
         .a-canvas {
-            z-index: 2 !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1 !important;
             background-color: transparent !important;
         }
 
-        /* UI 层 (最高层) */
+        /* 3. UI 界面层：必须在最顶层 (z-index: 999) */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -38,96 +47,91 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
+            justify-content: space-between;
         }
 
-        /* 顶部提示 */
-        .hint-box {
-            position: absolute;
-            top: 20px;
-            width: 100%;
-            text-align: center;
+        /* 顶部控制区 */
+        .top-controls {
             pointer-events: auto;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
         }
 
-        .hint-text {
-            background: rgba(0, 0, 0, 0.6);
+        .switch-btn {
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 5px 15px;
+            border: 1px solid white;
+            padding: 8px 15px;
             border-radius: 20px;
             font-size: 14px;
         }
 
-        /* 调节大小的滑块 */
-        .slider-container {
+        /* 中间滑动条 */
+        .slider-box {
             pointer-events: auto;
-            width: 80%;
-            margin: 0 auto 10px auto;
+            width: 60%;
+            margin: 0 auto;
             background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            padding: 5px 15px;
+            border-radius: 20px;
             color: white;
             font-size: 12px;
+            display: flex;
+            align-items: center;
         }
 
         input[type=range] {
-            flex-grow: 1;
+            flex: 1;
             margin: 0 10px;
         }
 
-        /* 特效选择栏 */
-        .effect-bar {
+        /* 底部特效与拍照 */
+        .bottom-controls {
             pointer-events: auto;
+            padding-bottom: 30px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             gap: 15px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            margin-bottom: 10px;
         }
 
-        .effect-btn {
+        /* 特效图标 */
+        .effect-list {
+            display: flex;
+            gap: 20px;
+        }
+
+        .effect-icon {
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.8);
+            background: white;
             border: 3px solid transparent;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             font-size: 24px;
             cursor: pointer;
-            transition: 0.2s;
         }
 
-        .effect-btn.active {
+        .effect-icon.active {
             border-color: #00ff00;
-            background: white;
             transform: scale(1.1);
         }
 
-        /* 底部操作 */
-        .action-bar {
-            pointer-events: auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding-bottom: 30px;
-        }
-
+        /* 拍照按钮 */
         #shutter {
             width: 70px;
             height: 70px;
             border: 4px solid white;
             border-radius: 50%;
             display: flex;
-            align-items: center;
             justify-content: center;
-            cursor: pointer;
+            align-items: center;
         }
 
         #shutter-inner {
@@ -139,10 +143,17 @@
         }
 
         #shutter.recording #shutter-inner {
+            background: red;
             width: 25px;
             height: 25px;
             border-radius: 4px;
-            background: red;
+        }
+
+        .msg {
+            color: yellow;
+            font-size: 12px;
+            margin-top: 5px;
+            text-shadow: 1px 1px 1px black;
         }
     </style>
 </head>
@@ -150,7 +161,7 @@
 <body>
 
     <!-- AR 场景 -->
-    <!-- alpha: true 保证背景透明，能看到摄像头 -->
+    <!-- 关键配置：alpha: true (背景透明) -->
     <a-scene mindar-face="imageTargetSrc: ; autoStart: true; facingMode: user" embedded
         renderer="colorManagement: true; physicallyCorrectLights: true; preserveDrawingBuffer: true; alpha: true"
         vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
@@ -162,120 +173,141 @@
                 src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
         </a-assets>
 
-        <!-- 1. 眼镜 (初始大小 0.01) -->
-        <a-entity id="effect-glasses" mindar-face-target="anchorIndex: 168" visible="true">
-            <a-gltf-model src="#glassesModel" position="0 -0.05 0" scale="0.01 0.01 0.01"
-                rotation="0 0 0"></a-gltf-model>
+        <!-- 特效1: 红鼻子 (使用球体，确保一定能显示) -->
+        <a-entity id="effect-nose" mindar-face-target="anchorIndex: 1" visible="true">
+            <a-sphere color="red" radius="0.025"></a-sphere>
         </a-entity>
 
-        <!-- 2. 红鼻子 (初始大小 0.025) -->
-        <a-entity id="effect-nose" mindar-face-target="anchorIndex: 1" visible="false">
-            <a-sphere color="red" radius="1" position="0 0 0" scale="0.025 0.025 0.025"></a-sphere>
+        <!-- 特效2: 眼镜 (3D模型) -->
+        <a-entity id="effect-glasses" mindar-face-target="anchorIndex: 168" visible="false">
+            <a-gltf-model src="#glassesModel" position="0 -0.05 0" scale="0.01 0.01 0.01"></a-gltf-model>
         </a-entity>
 
-        <!-- 3. 帽子 (用圆锥体代替，初始大小 0.15) -->
+        <!-- 特效3: 帽子 (使用圆锥体，确保一定能显示) -->
         <a-entity id="effect-hat" mindar-face-target="anchorIndex: 10" visible="false">
-            <a-cone color="#007bff" height="2" radius-bottom="1" position="0 0.5 -0.5" rotation="0 0 0"
-                scale="0.15 0.15 0.15"></a-cone>
+            <a-cone color="#007bff" height="0.3" radius-bottom="0.15" position="0 0.2 -0.1"></a-cone>
         </a-entity>
 
     </a-scene>
 
-
     <!-- UI 界面 -->
     <div id="ui-layer">
-        <div class="hint-box"><span class="hint-text" id="status-msg">请将脸对准摄像头</span></div>
+        <!-- 顶部：切换按钮 + 状态 -->
+        <div class="top-controls">
+            <button class="switch-btn" id="switch-cam-btn">🔄 切换前后置</button>
+            <div style="color:white; font-size:12px;" id="status-text">初始化...</div>
+        </div>
 
-        <!-- 大小调节滑块 -->
-        <div class="slider-container">
+        <!-- 中间：大小调节 -->
+        <div class="slider-box">
             <span>小</span>
-            <input type="range" id="size-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+            <input type="range" id="size-slider" min="0.5" max="2.5" step="0.1" value="1.0">
             <span>大</span>
         </div>
 
-        <!-- 特效切换 -->
-        <div class="effect-bar">
-            <div class="effect-btn active" onclick="switchEffect('glasses', this)">👓</div>
-            <div class="effect-btn" onclick="switchEffect('nose', this)">🔴</div>
-            <div class="effect-btn" onclick="switchEffect('hat', this)">🎩</div>
-        </div>
+        <!-- 底部：特效选择 + 拍照 -->
+        <div class="bottom-controls">
+            <div class="msg">长按红色按钮录制，点击拍照</div>
 
-        <!-- 拍照按钮 -->
-        <div class="action-bar">
+            <div class="effect-list">
+                <div class="effect-icon active" onclick="changeEffect('nose', this)">🔴</div>
+                <div class="effect-icon" onclick="changeEffect('glasses', this)">👓</div>
+                <div class="effect-icon" onclick="changeEffect('hat', this)">🎩</div>
+            </div>
+
             <div id="shutter">
                 <div id="shutter-inner"></div>
             </div>
         </div>
     </div>
 
-
     <script>
-        // === 1. 特效管理系统 ===
-        let currentEffect = 'glasses';
+        // === 1. 强制修复层级问题的脚本 ===
+        // 等待场景加载完成后，强制把 video 标签按到最下面
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('loaded', () => {
+            console.log("场景加载完毕，正在修复层级...");
+            document.getElementById('status-text').innerText = "请对准人脸";
 
-        // 基础尺寸配置 (不同模型的缩放比例不一样)
-        const baseScales = {
-            glasses: 0.01,
-            nose: 0.025,
-            hat: 0.15
-        };
-
-        function switchEffect(type, btn) {
-            // 1. UI 高亮
-            document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            // 2. 隐藏所有特效 (先全部设为 false)
-            document.getElementById('effect-glasses').setAttribute('visible', false);
-            document.getElementById('effect-nose').setAttribute('visible', false);
-            document.getElementById('effect-hat').setAttribute('visible', false);
-
-            // 3. 显示选中特效
-            const target = document.getElementById('effect-' + type);
-            if (target) {
-                target.setAttribute('visible', true);
-                currentEffect = type;
-
-                // 重置滑块位置
-                document.getElementById('size-slider').value = 1.0;
-                updateScale(1.0);
-            }
-        }
-
-        // === 2. 大小调节逻辑 (解决脸型不匹配) ===
-        const slider = document.getElementById('size-slider');
-
-        slider.addEventListener('input', (e) => {
-            const multiplier = parseFloat(e.target.value);
-            updateScale(multiplier);
+            // 每隔 1 秒检查一次 video 是否被 MindAR 插入，并强制修改它的样式
+            const fixInterval = setInterval(() => {
+                const video = document.querySelector('video');
+                if (video) {
+                    video.style.zIndex = '0';
+                    video.style.position = 'absolute';
+                    video.style.top = '0';
+                    video.style.left = '0';
+                    clearInterval(fixInterval);
+                }
+            }, 500);
         });
 
-        function updateScale(multiplier) {
-            // 找到当前特效内部的模型实体
-            let entity = null;
-            let base = 0;
+        // === 2. 摄像头切换逻辑 ===
+        const switchBtn = document.getElementById('switch-cam-btn');
+        switchBtn.addEventListener('click', () => {
+            const system = scene.systems['mindar-face-system'];
+            if (system) {
+                document.getElementById('status-text').innerText = "切换中...";
+                system.switchCamera(); // 使用原生切换，不刷新页面
+                setTimeout(() => {
+                    document.getElementById('status-text').innerText = "切换完成";
+                }, 1000);
+            } else {
+                alert("AR 系统尚未就绪");
+            }
+        });
 
-            if (currentEffect === 'glasses') {
-                entity = document.querySelector('#effect-glasses a-gltf-model');
-                base = baseScales.glasses;
-            } else if (currentEffect === 'nose') {
-                entity = document.querySelector('#effect-nose a-sphere');
-                base = baseScales.nose;
+        // === 3. 特效切换逻辑 ===
+        let currentEffect = 'nose';
+        const baseScales = { nose: 1, glasses: 0.01, hat: 1 }; // 基础缩放比例
+
+        window.changeEffect = function (name, btn) {
+            // UI 更新
+            document.querySelectorAll('.effect-icon').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 隐藏所有
+            document.getElementById('effect-nose').setAttribute('visible', false);
+            document.getElementById('effect-glasses').setAttribute('visible', false);
+            document.getElementById('effect-hat').setAttribute('visible', false);
+
+            // 显示选中
+            const target = document.getElementById('effect-' + name);
+            if (target) target.setAttribute('visible', true);
+
+            currentEffect = name;
+            // 重置滑块
+            document.getElementById('size-slider').value = 1.0;
+            updateSize(1.0);
+        }
+
+        // === 4. 大小调节逻辑 ===
+        const slider = document.getElementById('size-slider');
+        slider.addEventListener('input', (e) => updateSize(parseFloat(e.target.value)));
+
+        function updateSize(mul) {
+            let el = null;
+            let base = 1;
+
+            if (currentEffect === 'nose') {
+                el = document.querySelector('#effect-nose a-sphere');
+                base = 0.025; // 鼻子的基础半径
+            } else if (currentEffect === 'glasses') {
+                el = document.querySelector('#effect-glasses a-gltf-model');
+                base = 0.01; // 眼镜的基础 scale
             } else if (currentEffect === 'hat') {
-                entity = document.querySelector('#effect-hat a-cone');
-                base = baseScales.hat;
+                el = document.querySelector('#effect-hat a-cone');
+                base = 1; // 帽子的基础 scale
             }
 
-            if (entity) {
-                // 计算新尺寸
-                const newSize = base * multiplier;
-                entity.setAttribute('scale', `${newSize} ${newSize} ${newSize}`);
+            if (el) {
+                // 如果是几何体(nose/hat)，改 scale 或 radius 都可以，这里统一改 scale
+                el.setAttribute('scale', `${base * mul} ${base * mul} ${base * mul}`);
             }
         }
 
-        // === 3. 拍照/录制逻辑 ===
+        // === 5. 拍照与录像 ===
         const shutter = document.getElementById('shutter');
-        const msg = document.getElementById('status-msg');
         let pressTimer, isRecording = false, mediaRecorder, recordedChunks = [], mergeInterval;
 
         shutter.addEventListener('touchstart', (e) => { e.preventDefault(); startPress(); });
@@ -288,47 +320,46 @@
 
         function getMergedCanvas() {
             const video = document.querySelector('video');
-            const arScene = document.querySelector('a-scene');
-            if (!video || !arScene) return null;
+            const arCanvas = scene.components.screenshot.getCanvas('perspective');
+            if (!video || !arCanvas) return null;
 
-            const width = video.videoWidth;
-            const height = video.videoHeight;
+            const w = video.videoWidth;
+            const h = video.videoHeight;
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = w;
+            canvas.height = h;
             const ctx = canvas.getContext('2d');
 
-            // 绘制背景 (前置需镜像)
+            // 绘制视频
             ctx.save();
-            ctx.translate(width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0, width, height);
+            // 这里的逻辑稍微复杂：MindAR 内部会处理镜像，我们简单判断
+            // 通常前置是镜像的，后置不是。这里为了兼容性，统一先不镜像，如果不准再调
+            // 但大多数 iOS/Android 在 Canvas 绘制 video 时是原始流，需要水平翻转前置
+            // 这里简易处理：直接画
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1); // 默认前置镜像
+            ctx.drawImage(video, 0, 0, w, h);
             ctx.restore();
 
-            // 绘制特效
-            const arCanvas = arScene.components.screenshot.getCanvas('perspective');
-            if (arCanvas) ctx.drawImage(arCanvas, 0, 0, width, height);
+            // 绘制 AR
+            ctx.drawImage(arCanvas, 0, 0, w, h);
             return canvas;
         }
 
         function takePhoto() {
-            msg.innerText = "生成图片中...";
             const canvas = getMergedCanvas();
             if (canvas) {
                 const link = document.createElement('a');
                 link.download = 'ar-photo.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-                msg.innerText = "图片已保存";
             }
         }
 
         function startRecording() {
             isRecording = true;
             shutter.classList.add('recording');
-            msg.innerText = "录像中...";
             recordedChunks = [];
-
             const streamCanvas = document.createElement('canvas');
             const video = document.querySelector('video');
             streamCanvas.width = video.videoWidth;
@@ -340,27 +371,23 @@
                 if (merged) ctx.drawImage(merged, 0, 0);
             }, 33);
 
+            const stream = streamCanvas.captureStream(30);
             try {
-                const stream = streamCanvas.captureStream(30);
                 mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data) };
                 mediaRecorder.onstop = () => {
                     clearInterval(mergeInterval);
                     const blob = new Blob(recordedChunks, { type: 'video/webm' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'ar-video.webm';
-                    a.click();
-                    msg.innerText = "视频已保存";
+                    a.href = url; a.download = 'ar-video.webm'; a.click();
                 };
                 mediaRecorder.start();
             } catch (e) {
-                alert("录制失败，请使用系统录屏");
+                alert("录制失败: " + e.message);
                 stopRecording();
             }
         }
-
         function stopRecording() {
             isRecording = false;
             shutter.classList.remove('recording');
