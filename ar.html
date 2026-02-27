@@ -3,48 +3,255 @@
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>H5 人脸 AR 特效</title>
-    <!-- 1. 引入 A-Frame -->
+    <title>AR 特效相机 - 切换/拍照/录制</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <!-- 2. 引入 MindAR Face 版本 (注意这里是 face-aframe) -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        /* UI 按钮容器 */
+        .ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 999;
+            pointer-events: none;
+            /* 让点击穿透到按钮 */
+        }
+
+        /* 按钮通用样式 */
+        .btn {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.9);
+        }
+
+        .btn img {
+            width: 60%;
+            height: 60%;
+        }
+
+        /* 拍照按钮（大） */
+        #capture-btn {
+            width: 70px;
+            height: 70px;
+            border: 4px solid white;
+            background: transparent;
+        }
+
+        #capture-btn .inner {
+            width: 55px;
+            height: 55px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        /* 录制状态样式 */
+        #capture-btn.recording .inner {
+            background: red;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+        }
+
+        /* 切换和小按钮 */
+        .small-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
 </head>
 
 <body>
-    <!-- 
-      MindAR 场景配置：
-      mindar-face: 开启人脸模式
-    -->
-    <a-scene mindar-face device-orientation-permission-ui="enabled: false" vr-mode-ui="enabled: false">
 
-        <!-- 摄像头配置 (active="false" 是因为 MindAR 会接管摄像头) -->
+    <!-- 
+    renderer="preserveDrawingBuffer: true" 
+    非常重要！否则截图时 Canvas 会是黑屏，因为它默认每一帧都会清空缓冲区。
+  -->
+    <a-scene id="scene" mindar-face embedded
+        renderer="colorManagement: true, physicallyCorrectLights; preserveDrawingBuffer: true"
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+
+        <!-- 摄像头实体 -->
         <a-camera active="false" position="0 0 0"></a-camera>
 
-        <!-- 资源：预加载眼镜模型 -->
+        <!-- 资源 -->
         <a-assets>
-            <!-- 这是官方的一个眼镜模型 -->
             <a-asset-item id="glassesModel"
                 src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
         </a-assets>
 
-        <!-- 
-        人脸追踪实体 
-        mindar-face-target="anchorIndex: 168"
-        anchorIndex 是锚点：
-        168 = 眉心/两眼之间 (适合放眼镜、帽子)
-        1   = 鼻尖 (适合放小丑红鼻子)
-        10  = 嘴巴
-      -->
+        <!-- 人脸锚点：眉心 -->
         <a-entity mindar-face-target="anchorIndex: 168">
-
-            <!-- 放置 3D 模型 -->
-            <!-- position/rotation/scale 需要根据模型自己微调 -->
-            <a-gltf-model rotation="0 0 0" position="0 -0.05 0" scale="0.01 0.01 0.01" src="#glassesModel">
-            </a-gltf-model>
-
+            <a-gltf-model rotation="0 0 0" position="0 -0.05 0" scale="0.01 0.01 0.01"
+                src="#glassesModel"></a-gltf-model>
         </a-entity>
-
     </a-scene>
+
+    <!-- UI 界面 -->
+    <div class="ui-container">
+        <button id="switch-btn" class="btn small-btn">切换</button>
+        <button id="capture-btn" class="btn">
+            <div class="inner"></div>
+        </button>
+        <button id="record-hint" class="btn small-btn" style="width:auto; padding:0 10px; font-size:10px;">长按录像</button>
+    </div>
+
+    <script>
+        const sceneEl = document.querySelector('a-scene');
+        const switchBtn = document.querySelector('#switch-btn');
+        const captureBtn = document.querySelector('#capture-btn');
+
+        // 1. 处理摄像头切换逻辑
+        // 现在的 WebAR 很难做到“无缝切换”，最稳妥的方法是带参数刷新页面
+        const urlParams = new URLSearchParams(window.location.search);
+        let facingMode = urlParams.get('facing') || 'user'; // 默认 user (前置)
+
+        // 初始化场景配置
+        if (facingMode === 'environment') {
+            sceneEl.setAttribute('mindar-face', 'facingMode: environment');
+            switchBtn.innerText = "前置";
+        } else {
+            sceneEl.setAttribute('mindar-face', 'facingMode: user');
+            switchBtn.innerText = "后置";
+        }
+
+        switchBtn.addEventListener('click', () => {
+            const newMode = facingMode === 'user' ? 'environment' : 'user';
+            // 重新加载页面并带上参数
+            window.location.search = `?facing=${newMode}`;
+        });
+
+
+        // 2. 处理拍照功能
+        function takePhoto() {
+            // 获取 AR 的 Canvas (3D模型)
+            const aSceneCanvas = sceneEl.components.screenshot.getCanvas('perspective');
+            // 获取 摄像头的 Video (背景)
+            const video = document.querySelector('video');
+
+            if (!video || !aSceneCanvas) return;
+
+            // 创建一个合并用的 Canvas
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            const mergeCanvas = document.createElement('canvas');
+            mergeCanvas.width = width;
+            mergeCanvas.height = height;
+            const ctx = mergeCanvas.getContext('2d');
+
+            // A. 先画视频背景 (需要镜像翻转，如果是前置摄像头)
+            ctx.save();
+            if (facingMode === 'user') {
+                ctx.translate(width, 0);
+                ctx.scale(-1, 1);
+            }
+            ctx.drawImage(video, 0, 0, width, height);
+            ctx.restore();
+
+            // B. 再画 3D 模型 (AR Canvas)
+            // 注意：A-Frame 的 Canvas 可能会拉伸，需要按照比例画上去
+            ctx.drawImage(aSceneCanvas, 0, 0, width, height);
+
+            // C. 下载图片
+            const link = document.createElement('a');
+            link.download = 'ar-photo-' + Date.now() + '.png';
+            link.href = mergeCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+
+        // 3. 处理录制功能 (长按)
+        let mediaRecorder;
+        let recordedChunks = [];
+        let isRecording = false;
+        let pressTimer;
+
+        // 按下开始计时
+        captureBtn.addEventListener('mousedown', startPress);
+        captureBtn.addEventListener('touchstart', startPress);
+
+        // 松开（如果是短按则拍照，长按则停止录制）
+        captureBtn.addEventListener('mouseup', endPress);
+        captureBtn.addEventListener('touchend', endPress);
+
+        function startPress(e) {
+            e.preventDefault(); // 防止触摸滚动
+            pressTimer = setTimeout(() => {
+                startRecording();
+            }, 500); // 长按 500ms 触发录制
+        }
+
+        function endPress(e) {
+            e.preventDefault();
+            clearTimeout(pressTimer);
+            if (isRecording) {
+                stopRecording();
+            } else {
+                takePhoto(); // 如果没触发长按，就执行拍照
+            }
+        }
+
+        function startRecording() {
+            console.log("开始录制...");
+            isRecording = true;
+            captureBtn.classList.add('recording');
+
+            // 录制流逻辑比较复杂，需要合并 Canvas 和 Video
+            // 这里为了演示稳定性，我们只录制 Canvas (3D) + 声音
+            // 如果要录制整个 AR 背景，需要更复杂的流合并逻辑
+            const stream = document.querySelector('canvas').captureStream(30);
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = function (e) {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = function () {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ar-video.webm';
+                a.click();
+                recordedChunks = [];
+            };
+
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            console.log("停止录制");
+            isRecording = false;
+            captureBtn.classList.remove('recording');
+            if (mediaRecorder) mediaRecorder.stop();
+        }
+
+    </script>
 </body>
 
 </html>
