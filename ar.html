@@ -3,43 +3,45 @@
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>我的 H5 AR 效果</title>
-    <!-- 1. 引入 A-Frame (3D引擎) -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <!-- 2. 引入 MindAR (AR引擎) -->
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <title>H5 人脸 AR 特效</title>
+    <!-- 1. 引入 A-Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- 2. 引入 MindAR Face 版本 (注意这里是 face-aframe) -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
 </head>
 
 <body>
     <!-- 
-      配置 AR 场景：
-      mindar-image="imageTargetSrc: [你的.mind文件路径]" 
-      ui-scanning="no" 去掉默认扫描框(可选)
+      MindAR 场景配置：
+      mindar-face: 开启人脸模式
     -->
-    <a-scene
-        mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/image-tracking/assets/card-example/card.mind;"
-        color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false">
+    <a-scene mindar-face device-orientation-permission-ui="enabled: false" vr-mode-ui="enabled: false">
 
-        <!-- 资源管理器：预加载 3D 模型 -->
+        <!-- 摄像头配置 (active="false" 是因为 MindAR 会接管摄像头) -->
+        <a-camera active="false" position="0 0 0"></a-camera>
+
+        <!-- 资源：预加载眼镜模型 -->
         <a-assets>
-            <!-- id 是模型的唯一名字，src 是模型路径 -->
-            <a-asset-item id="avatarModel"
-                src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/image-tracking/assets/card-example/softmind/scene.gltf"></a-asset-item>
+            <!-- 这是官方的一个眼镜模型 -->
+            <a-asset-item id="glassesModel"
+                src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
         </a-assets>
 
-        <!-- 摄像头实体 -->
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
         <!-- 
-        AR 追踪实体：
-        targetIndex: 0 代表识别 .mind 文件里的第一张图
+        人脸追踪实体 
+        mindar-face-target="anchorIndex: 168"
+        anchorIndex 是锚点：
+        168 = 眉心/两眼之间 (适合放眼镜、帽子)
+        1   = 鼻尖 (适合放小丑红鼻子)
+        10  = 嘴巴
       -->
-        <a-entity mindar-image-target="targetIndex: 0">
-            <!-- 这里放你的 3D 模型 -->
-            <a-entity gltf-model="#avatarModel" rotation="0 0 0" position="0 0 0.1" scale="0.005 0.005 0.005"
-                animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate">
-            </a-entity>
+        <a-entity mindar-face-target="anchorIndex: 168">
+
+            <!-- 放置 3D 模型 -->
+            <!-- position/rotation/scale 需要根据模型自己微调 -->
+            <a-gltf-model rotation="0 0 0" position="0 -0.05 0" scale="0.01 0.01 0.01" src="#glassesModel">
+            </a-gltf-model>
+
         </a-entity>
 
     </a-scene>
