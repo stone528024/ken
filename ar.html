@@ -4,9 +4,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>AR 后置默认版</title>
+    <title>AR 特效相机 (iOS修复版)</title>
+
+    <!-- 1. 引入库文件 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -30,20 +33,19 @@
         }
 
         /* 顶部提示 */
-        .top-hint {
+        .status-bar {
             position: absolute;
-            top: 20px;
+            top: 0;
             width: 100%;
+            padding: 10px 0;
             text-align: center;
-            color: yellow;
-            text-shadow: 1px 1px 2px black;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
             font-size: 14px;
             pointer-events: auto;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 5px 0;
         }
 
-        /* 特效按钮栏 */
+        /* 特效选择栏 */
         .effect-bar {
             pointer-events: auto;
             display: flex;
@@ -55,22 +57,31 @@
         }
 
         .effect-btn {
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
             background: white;
             border: 3px solid transparent;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            font-size: 10px;
+            color: #333;
+        }
+
+        .effect-btn span {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 2px;
         }
 
         .effect-btn.active {
             border-color: #00ff00;
             transform: scale(1.1);
+            background: #fff;
         }
 
         /* 底部操作栏 */
@@ -83,17 +94,17 @@
             background: linear-gradient(to top, black, transparent);
         }
 
-        /* 按钮样式 */
         .btn {
             background: rgba(255, 255, 255, 0.2);
             color: white;
             border: 1px solid white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-size: 12px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
         }
 
-        /* 拍照录像大按钮 */
+        /* 快门按钮 */
         #shutter {
             width: 70px;
             height: 70px;
@@ -119,119 +130,116 @@
             background: red;
         }
     </style>
-
-    <script>
-        // 在页面加载前，判断 URL 参数
-        // 如果没有参数，我们就强制加上 facing=environment (后置)
-        // 这样保证第一次打开就是后置
-        (function () {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (!urlParams.has('facing')) {
-                // 这里的 logic 是：如果没有参数，重定向到带 environment 参数的网址
-                // 防止浏览器缓存前置配置
-                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?facing=environment';
-                window.location.replace(newUrl);
-            }
-        })();
-    </script>
 </head>
 
 <body>
 
-    <!-- 
-    核心修改：
-    使用 JS 读取 URL 参数，如果没读到（极少情况）也默认 environment 
-  -->
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const facing = params.get('facing') || 'environment'; // 默认后置
-
-        document.write(`
-      <a-scene 
-        mindar-face="imageTargetSrc: ; autoStart: true; facingMode: ${facing}"
-        embedded
+    <!-- AR 场景 -->
+    <!-- 注意：初始 facingMode 设为 user (前置)，保证 iOS 第一次能稳定启动 -->
+    <!-- 我们稍后用按钮切换到后置 -->
+    <a-scene mindar-face="imageTargetSrc: ; autoStart: true; facingMode: user" embedded
         renderer="colorManagement: true, physicallyCorrectLights; preserveDrawingBuffer: true"
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
-        
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+
         <a-camera active="false" position="0 0 0"></a-camera>
 
+        <!-- 资源 -->
         <a-assets>
-          <a-asset-item id="glassesModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
+            <a-asset-item id="glassesModel"
+                src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf"></a-asset-item>
         </a-assets>
 
-        <!-- 特效1: 红鼻子 (默认开启，最容易测试) -->
-        <a-entity id="el-nose" mindar-face-target="anchorIndex: 1" visible="true">
-          <a-sphere color="red" radius="0.025"></a-sphere>
+        <!-- 特效1: 红鼻子 (Anchor 1 = 鼻尖) -->
+        <a-entity id="el-nose" mindar-face-target="anchorIndex: 1" visible="false">
+            <a-sphere color="red" radius="0.025"></a-sphere>
         </a-entity>
 
-        <!-- 特效2: 眼镜 -->
-        <a-entity id="el-glasses" mindar-face-target="anchorIndex: 168" visible="false">
-          <a-gltf-model rotation="0 0 0" position="0 -0.05 0" scale="0.01 0.01 0.01" src="#glassesModel"></a-gltf-model>
+        <!-- 特效2: 眼镜 (Anchor 168 = 眉心) -->
+        <a-entity id="el-glasses" mindar-face-target="anchorIndex: 168" visible="true">
+            <a-gltf-model rotation="0 0 0" position="0 -0.05 0" scale="0.01 0.01 0.01"
+                src="#glassesModel"></a-gltf-model>
         </a-entity>
 
-      </a-scene>
-    `);
-    </script>
+        <!-- 特效3: 帽子 (Anchor 10 = 头顶) -->
+        <a-entity id="el-hat" mindar-face-target="anchorIndex: 10" visible="false">
+            <!-- 这里用一个简单的蓝色圆锥体代替帽子模型，确保能显示 -->
+            <a-cone color="blue" radius-bottom="0.1" height="0.2" position="0 0.1 0"></a-cone>
+        </a-entity>
+
+    </a-scene>
+
 
     <!-- UI 界面 -->
     <div id="ui-layer">
-        <div class="top-hint" id="hint-msg">当前是【后置摄像头】请对着人脸或照片</div>
+        <div class="status-bar" id="msg">点击“切换”使用后置摄像头</div>
 
         <!-- 特效选择 -->
         <div class="effect-bar">
-            <div class="effect-btn active" onclick="setEffect('nose', this)">🔴</div>
-            <div class="effect-btn" onclick="setEffect('glasses', this)">👓</div>
-            <div class="effect-btn" onclick="setEffect('none', this)">🚫</div>
+            <div class="effect-btn active" onclick="setEffect('glasses', this)">
+                <span>👓</span>眼镜
+            </div>
+            <div class="effect-btn" onclick="setEffect('nose', this)">
+                <span>🔴</span>鼻子
+            </div>
+            <div class="effect-btn" onclick="setEffect('hat', this)">
+                <span>🎩</span>帽子
+            </div>
         </div>
 
         <!-- 底部按钮 -->
         <div class="action-bar">
-            <button class="btn" id="switch-btn">切回前置</button>
+            <button class="btn" id="switch-btn">🔄 切换</button>
             <div id="shutter">
                 <div id="shutter-inner"></div>
             </div>
-            <button class="btn" onclick="alert('长按中间按钮录制，松开保存')">帮助</button>
+            <button class="btn" onclick="alert('iOS用户如果录制失败，请使用系统自带的屏幕录制功能。')">❓ 帮助</button>
         </div>
     </div>
 
-    <script>
-        // --- 1. 摄像头切换逻辑 ---
-        const switchBtn = document.getElementById('switch-btn');
-        const currentFacing = new URLSearchParams(window.location.search).get('facing') || 'environment';
 
-        // 更新按钮文字和提示
-        if (currentFacing === 'user') {
-            switchBtn.innerText = "切回后置";
-            document.getElementById('hint-msg').innerText = "当前是【前置摄像头】自拍模式";
-        } else {
-            switchBtn.innerText = "切回前置";
-            document.getElementById('hint-msg').innerText = "当前是【后置摄像头】请找个人脸扫一下";
-        }
+    <script>
+        // === 1. iOS 摄像头切换核心修复 ===
+        // 我们不再刷新页面，而是调用 AR 引擎的方法
+        const switchBtn = document.getElementById('switch-btn');
+        const msg = document.getElementById('msg');
+        let isFrontCamera = true; // 初始状态
 
         switchBtn.addEventListener('click', () => {
-            const newMode = currentFacing === 'user' ? 'environment' : 'user';
-            window.location.search = `?facing=${newMode}`;
+            const scene = document.querySelector('a-scene');
+            // 获取 MindAR 系统实例
+            const mindArSystem = scene.systems['mindar-face-system'];
+
+            if (mindArSystem) {
+                msg.innerText = "正在切换摄像头...";
+                // 调用引擎内部切换方法
+                mindArSystem.switchCamera();
+
+                isFrontCamera = !isFrontCamera;
+                msg.innerText = isFrontCamera ? "当前：前置 (自拍)" : "当前：后置 (请对准人脸)";
+            } else {
+                alert("AR 引擎尚未加载完成，请稍后再试");
+            }
         });
 
-        // --- 2. 特效切换逻辑 ---
+        // === 2. 特效切换逻辑 ===
         window.setEffect = function (type, btn) {
+            // 样式更新
             document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            const nose = document.querySelector('#el-nose');
-            const glasses = document.querySelector('#el-glasses');
+            // 隐藏所有
+            document.getElementById('el-nose').setAttribute('visible', false);
+            document.getElementById('el-glasses').setAttribute('visible', false);
+            document.getElementById('el-hat').setAttribute('visible', false);
 
-            if (nose) nose.setAttribute('visible', false);
-            if (glasses) glasses.setAttribute('visible', false);
-
-            if (type === 'nose' && nose) nose.setAttribute('visible', true);
-            if (type === 'glasses' && glasses) glasses.setAttribute('visible', true);
+            // 显示选中
+            if (type === 'nose') document.getElementById('el-nose').setAttribute('visible', true);
+            if (type === 'glasses') document.getElementById('el-glasses').setAttribute('visible', true);
+            if (type === 'hat') document.getElementById('el-hat').setAttribute('visible', true);
         }
 
-        // --- 3. 录像逻辑 (合并画面) ---
+        // === 3. 录像/拍照逻辑 ===
         const shutter = document.getElementById('shutter');
-        const hintMsg = document.getElementById('hint-msg');
         let pressTimer, isRecording = false, mediaRecorder, recordedChunks = [], mergeInterval;
 
         shutter.addEventListener('touchstart', (e) => { e.preventDefault(); startPress(); });
@@ -240,7 +248,7 @@
         shutter.addEventListener('mouseup', (e) => { e.preventDefault(); endPress(); });
 
         function startPress() {
-            pressTimer = setTimeout(startRecording, 500);
+            pressTimer = setTimeout(startRecording, 500); // 长按 0.5秒
         }
 
         function endPress() {
@@ -249,6 +257,7 @@
             else takePhoto();
         }
 
+        // 获取合成画面 (Video + AR)
         function getMergedCanvas() {
             const video = document.querySelector('video');
             const arScene = document.querySelector('a-scene');
@@ -261,66 +270,79 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
 
+            // 绘制背景
             ctx.save();
-            // 如果是前置才需要镜像，后置不需要
-            if (currentFacing === 'user') {
+            // 只有前置摄像头需要镜像，后置不需要
+            // MindAR 的 activeFacingMode 可以判断当前是哪种
+            if (isFrontCamera) {
                 ctx.translate(width, 0);
                 ctx.scale(-1, 1);
             }
             ctx.drawImage(video, 0, 0, width, height);
             ctx.restore();
 
+            // 绘制特效
             const arCanvas = arScene.components.screenshot.getCanvas('perspective');
             if (arCanvas) ctx.drawImage(arCanvas, 0, 0, width, height);
             return canvas;
         }
 
         function takePhoto() {
-            hintMsg.innerText = "生成图片中...";
+            msg.innerText = "生成图片...";
             const canvas = getMergedCanvas();
             if (canvas) {
                 const link = document.createElement('a');
-                link.download = 'ar-photo.png';
+                link.download = `ar-photo-${Date.now()}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-                hintMsg.innerText = "图片已保存";
+                msg.innerText = "图片已保存";
             }
         }
 
         function startRecording() {
             isRecording = true;
             shutter.classList.add('recording');
-            hintMsg.innerText = "录制中...";
+            msg.innerText = "录制中...";
             recordedChunks = [];
 
             const streamCanvas = document.createElement('canvas');
             const video = document.querySelector('video');
+            // 防止未初始化
+            if (!video) { stopRecording(); return; }
+
             streamCanvas.width = video.videoWidth;
             streamCanvas.height = video.videoHeight;
             const ctx = streamCanvas.getContext('2d');
 
+            // 循环绘制
             mergeInterval = setInterval(() => {
                 const merged = getMergedCanvas();
                 if (merged) ctx.drawImage(merged, 0, 0);
-            }, 33);
+            }, 33); // ~30 FPS
 
             const stream = streamCanvas.captureStream(30);
+
             try {
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                // iOS 兼容性尝试
+                let mimeType = 'video/webm';
+                if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+
+                mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
                 mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
                 mediaRecorder.onstop = () => {
                     clearInterval(mergeInterval);
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const blob = new Blob(recordedChunks, { type: mimeType });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'ar-video.webm';
+                    a.download = `ar-video-${Date.now()}.${mimeType === 'video/mp4' ? 'mp4' : 'webm'}`;
                     a.click();
-                    hintMsg.innerText = "视频已保存";
+                    msg.innerText = "视频已保存";
                 };
                 mediaRecorder.start();
             } catch (e) {
-                alert("不支持录制，请用系统录屏");
+                console.error(e);
+                alert("录制启动失败：iOS Safari 对网页录像限制严格，请使用系统自带的屏幕录制功能。");
                 stopRecording();
             }
         }
