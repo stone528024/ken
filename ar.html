@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>我的 H5 AR 效果</title>
+    <!-- 1. 引入 A-Frame (3D引擎) -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <!-- 2. 引入 MindAR (AR引擎) -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+</head>
+
+<body>
+    <!-- 
+      配置 AR 场景：
+      mindar-image="imageTargetSrc: [你的.mind文件路径]" 
+      ui-scanning="no" 去掉默认扫描框(可选)
+    -->
+    <a-scene
+        mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/image-tracking/assets/card-example/card.mind;"
+        color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+
+        <!-- 资源管理器：预加载 3D 模型 -->
+        <a-assets>
+            <!-- id 是模型的唯一名字，src 是模型路径 -->
+            <a-asset-item id="avatarModel"
+                src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/image-tracking/assets/card-example/softmind/scene.gltf"></a-asset-item>
+        </a-assets>
+
+        <!-- 摄像头实体 -->
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- 
+        AR 追踪实体：
+        targetIndex: 0 代表识别 .mind 文件里的第一张图
+      -->
+        <a-entity mindar-image-target="targetIndex: 0">
+            <!-- 这里放你的 3D 模型 -->
+            <a-entity gltf-model="#avatarModel" rotation="0 0 0" position="0 0 0.1" scale="0.005 0.005 0.005"
+                animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate">
+            </a-entity>
+        </a-entity>
+
+    </a-scene>
+</body>
+
+</html>
