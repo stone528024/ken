@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,7 +31,19 @@
       font-size: 1.25rem;
       font-weight: 700;
       position: relative;
+      /* 初始状态：隐藏且缩小 */
       transform: scale(0) translateY(-20px);
+      opacity: 0;
+    }
+
+    /* 修复关键点：常驻显示状态 */
+    .ball.show {
+      opacity: 1 !important;
+      transform: scale(1) translateY(0) !important;
+    }
+
+    /* 进场动画类 */
+    .ball.animate-appear {
       animation: ballAppear 0.5s ease-out forwards;
     }
 
@@ -41,23 +54,23 @@
       left: 12px;
       width: 16px;
       height: 8px;
-      background: rgba(255,255,255,0.4);
+      background: rgba(255, 255, 255, 0.4);
       border-radius: 50%;
       transform: rotate(-30deg);
     }
 
     .ball-red {
       background: linear-gradient(145deg, #ff6b6b, #ee5a5a, #dc3545);
-      box-shadow: 0 4px 15px rgba(220, 53, 69, 0.5), inset 0 -3px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(220, 53, 69, 0.5), inset 0 -3px 10px rgba(0, 0, 0, 0.2);
       color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     .ball-blue {
       background: linear-gradient(145deg, #5c9eff, #4a8fe7, #2563eb);
-      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.5), inset 0 -3px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.5), inset 0 -3px 10px rgba(0, 0, 0, 0.2);
       color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     @keyframes ballAppear {
@@ -65,13 +78,12 @@
         opacity: 0;
         transform: scale(0) translateY(-20px);
       }
+
       60% {
         opacity: 1;
         transform: scale(1.2) translateY(0);
       }
-      80% {
-        transform: scale(0.9);
-      }
+
       100% {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -79,9 +91,12 @@
     }
 
     @keyframes bounce {
-      0%, 100% {
+
+      0%,
+      100% {
         transform: translateY(0);
       }
+
       50% {
         transform: translateY(-8px);
       }
@@ -89,19 +104,6 @@
 
     .ball.bounce {
       animation: bounce 0.6s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .generating .ball {
-      animation: spin 0.8s linear infinite;
     }
 
     /* 标签页样式 */
@@ -124,7 +126,7 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
       transition: left 0.5s;
     }
 
@@ -145,28 +147,28 @@
     }
 
     .tab-btn.inactive {
-      background: rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.6);
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.6);
     }
 
     .tab-btn.inactive:hover {
-      background: rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.8);
+      background: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.8);
     }
 
     /* 卡片样式 */
     .card {
-      background: rgba(255,255,255,0.05);
+      background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
       padding: 24px;
       transition: all 0.3s ease;
     }
 
     .card:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.15);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
     }
 
     /* 按钮样式 */
@@ -182,6 +184,11 @@
       overflow: hidden;
     }
 
+    .btn-generate:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .btn-generate.dlt {
       background: linear-gradient(135deg, #dc3545, #c82333);
       color: #fff;
@@ -194,17 +201,45 @@
       box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
     }
 
-    .btn-generate:hover {
+    .btn-generate:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 6px 25px rgba(220, 53, 69, 0.5);
     }
 
-    .btn-generate:active {
+    .btn-generate.ssq:hover:not(:disabled) {
+      box-shadow: 0 6px 25px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-generate:active:not(:disabled) {
       transform: translateY(0);
     }
 
-    .btn-generate.ssq:hover {
-      box-shadow: 0 6px 25px rgba(37, 99, 235, 0.5);
+    /* 复制按钮样式 */
+    .btn-copy {
+      margin-top: 15px;
+      padding: 8px 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      color: #ddd;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .btn-copy svg {
+      width: 16px;
+      height: 16px;
     }
 
     /* 输入框样式 */
@@ -214,17 +249,17 @@
       text-align: center;
       font-size: 1.125rem;
       font-weight: 600;
-      border: 2px solid rgba(255,255,255,0.2);
+      border: 2px solid rgba(255, 255, 255, 0.2);
       border-radius: 10px;
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
       color: #fff;
       transition: all 0.3s ease;
     }
 
     .input-number:focus {
       outline: none;
-      border-color: rgba(255,255,255,0.5);
-      background: rgba(255,255,255,0.15);
+      border-color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.15);
     }
 
     /* 折叠面板样式 */
@@ -234,8 +269,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 10px;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -244,7 +279,7 @@
     }
 
     .accordion-header:hover {
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .accordion-header.active {
@@ -256,8 +291,8 @@
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.4s ease-out;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-top: none;
       border-radius: 0 0 10px 10px;
     }
@@ -284,16 +319,16 @@
     .prize-table td {
       padding: 12px 16px;
       text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .prize-table th {
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
       font-weight: 600;
     }
 
     .prize-table tr:hover {
-      background: rgba(255,255,255,0.05);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .prize-table tr.first-prize {
@@ -305,23 +340,11 @@
       font-weight: 700;
     }
 
-    /* 动画延迟 */
-    .ball:nth-child(1) { animation-delay: 0s; }
-    .ball:nth-child(2) { animation-delay: 0.1s; }
-    .ball:nth-child(3) { animation-delay: 0.2s; }
-    .ball:nth-child(4) { animation-delay: 0.3s; }
-    .ball:nth-child(5) { animation-delay: 0.4s; }
-    .ball:nth-child(6) { animation-delay: 0.5s; }
-    .ball:nth-child(7) { animation-delay: 0.6s; }
-    .ball:nth-child(8) { animation-delay: 0.7s; }
-    .ball:nth-child(9) { animation-delay: 0.8s; }
-    .ball:nth-child(10) { animation-delay: 0.9s; }
-
     /* 分隔线 */
     .separator {
       width: 2px;
       height: 40px;
-      background: rgba(255,255,255,0.3);
+      background: rgba(255, 255, 255, 0.3);
       margin: 0 8px;
       border-radius: 2px;
     }
@@ -331,28 +354,42 @@
       display: none !important;
     }
 
-    /* 闪烁效果 */
-    @keyframes shimmer {
-      0% {
-        background-position: -200% 0;
-      }
-      100% {
-        background-position: 200% 0;
-      }
+    /* Toast 提示 */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 8px;
+      padding: 16px;
+      position: fixed;
+      z-index: 100;
+      left: 50%;
+      top: 30px;
+      transform: translateX(-50%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.3s;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    .shimmer {
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-      background-size: 200% 100%;
-      animation: shimmer 2s infinite;
+    #toast.show {
+      visibility: visible;
+      opacity: 1;
     }
   </style>
 </head>
+
 <body class="p-4 md:p-8">
+  <!-- 复制成功提示 -->
+  <div id="toast">复制成功！</div>
+
   <div class="max-w-4xl mx-auto">
     <!-- 标题 -->
     <header class="text-center mb-8">
-      <h1 class="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 bg-clip-text text-transparent">
+      <h1
+        class="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 bg-clip-text text-transparent">
         彩票号码生成器
       </h1>
       <p class="text-gray-400">大乐透 & 双色球随机号码生成</p>
@@ -374,7 +411,8 @@
       <div class="card">
         <h2 class="text-xl font-bold mb-6 text-red-400 flex items-center gap-2">
           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 12a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 11-4 0 2 2 0 014 0zm-4-4a2 2 0 11-4 0 2 2 0 014 0z"/>
+            <path
+              d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 12a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 11-4 0 2 2 0 014 0zm-4-4a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           大乐透号码生成
         </h2>
@@ -383,12 +421,14 @@
         <div class="flex flex-wrap gap-6 mb-6">
           <div class="flex items-center gap-3">
             <label class="text-gray-300">前区(红球):</label>
-            <input type="number" id="dlt-red" class="input-number" value="5" min="5" max="30" onchange="updateDltInfo()">
+            <input type="number" id="dlt-red" class="input-number" value="5" min="5" max="30"
+              onchange="updateDltInfo()">
             <span class="text-gray-500 text-sm">个 (5-30)</span>
           </div>
           <div class="flex items-center gap-3">
             <label class="text-gray-300">后区(蓝球):</label>
-            <input type="number" id="dlt-blue" class="input-number" value="2" min="2" max="10" onchange="updateDltInfo()">
+            <input type="number" id="dlt-blue" class="input-number" value="2" min="2" max="10"
+              onchange="updateDltInfo()">
             <span class="text-gray-500 text-sm">个 (2-10)</span>
           </div>
         </div>
@@ -407,21 +447,32 @@
         </div>
 
         <!-- 号码展示区 -->
-        <div id="dlt-result" class="flex flex-wrap items-center justify-center gap-3 min-h-[80px] p-4 bg-black/20 rounded-xl">
-          <p class="text-gray-500">点击按钮生成号码</p>
+        <div id="dlt-result-container"
+          class="bg-black/20 rounded-xl p-4 min-h-[120px] flex flex-col items-center justify-center">
+          <div id="dlt-result" class="flex flex-wrap items-center justify-center gap-3">
+            <p class="text-gray-500">点击按钮生成号码</p>
+          </div>
+          <!-- 复制按钮 (初始隐藏) -->
+          <button id="btn-copy-dlt" class="btn-copy hidden" onclick="copyNumbers('dlt')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            复制号码
+          </button>
         </div>
       </div>
 
       <!-- 规则说明 -->
       <div class="card">
         <h2 class="text-xl font-bold mb-4 text-red-400">大乐透规则说明</h2>
-        
+
         <div class="space-y-3">
           <div class="accordion-item">
             <button class="accordion-header" onclick="toggleAccordion(this)">
               <span>基本规则</span>
               <svg class="accordion-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             <div class="accordion-content">
@@ -438,7 +489,7 @@
             <button class="accordion-header" onclick="toggleAccordion(this)">
               <span>玩法说明</span>
               <svg class="accordion-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             <div class="accordion-content">
@@ -522,7 +573,8 @@
       <div class="card">
         <h2 class="text-xl font-bold mb-6 text-blue-400 flex items-center gap-2">
           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 12a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 11-4 0 2 2 0 014 0zm-4-4a2 2 0 11-4 0 2 2 0 014 0z"/>
+            <path
+              d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 12a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 11-4 0 2 2 0 014 0zm-4-4a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           双色球号码生成
         </h2>
@@ -531,12 +583,14 @@
         <div class="flex flex-wrap gap-6 mb-6">
           <div class="flex items-center gap-3">
             <label class="text-gray-300">红球:</label>
-            <input type="number" id="ssq-red" class="input-number" value="6" min="6" max="27" onchange="updateSsqInfo()">
+            <input type="number" id="ssq-red" class="input-number" value="6" min="6" max="27"
+              onchange="updateSsqInfo()">
             <span class="text-gray-500 text-sm">个 (6-27)</span>
           </div>
           <div class="flex items-center gap-3">
             <label class="text-gray-300">蓝球:</label>
-            <input type="number" id="ssq-blue" class="input-number" value="1" min="1" max="15" onchange="updateSsqInfo()">
+            <input type="number" id="ssq-blue" class="input-number" value="1" min="1" max="15"
+              onchange="updateSsqInfo()">
             <span class="text-gray-500 text-sm">个 (1-15)</span>
           </div>
         </div>
@@ -555,21 +609,32 @@
         </div>
 
         <!-- 号码展示区 -->
-        <div id="ssq-result" class="flex flex-wrap items-center justify-center gap-3 min-h-[80px] p-4 bg-black/20 rounded-xl">
-          <p class="text-gray-500">点击按钮生成号码</p>
+        <div id="ssq-result-container"
+          class="bg-black/20 rounded-xl p-4 min-h-[120px] flex flex-col items-center justify-center">
+          <div id="ssq-result" class="flex flex-wrap items-center justify-center gap-3">
+            <p class="text-gray-500">点击按钮生成号码</p>
+          </div>
+          <!-- 复制按钮 -->
+          <button id="btn-copy-ssq" class="btn-copy hidden" onclick="copyNumbers('ssq')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            复制号码
+          </button>
         </div>
       </div>
 
       <!-- 规则说明 -->
       <div class="card">
         <h2 class="text-xl font-bold mb-4 text-blue-400">双色球规则说明</h2>
-        
+
         <div class="space-y-3">
           <div class="accordion-item">
             <button class="accordion-header" onclick="toggleAccordion(this)">
               <span>基本规则</span>
               <svg class="accordion-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             <div class="accordion-content">
@@ -586,7 +651,7 @@
             <button class="accordion-header" onclick="toggleAccordion(this)">
               <span>玩法说明</span>
               <svg class="accordion-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             <div class="accordion-content">
@@ -653,7 +718,9 @@
     <div class="card mt-6 border-yellow-500/30">
       <div class="flex items-start gap-3">
         <svg class="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          <path fill-rule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clip-rule="evenodd" />
         </svg>
         <div>
           <h3 class="font-bold text-yellow-500 mb-1">温馨提示</h3>
@@ -669,8 +736,19 @@
   </div>
 
   <script>
+    // 存储当前生成的号码，用于复制功能
+    let currentNumbers = {
+      dlt: { red: [], blue: [] },
+      ssq: { red: [], blue: [] }
+    };
+
+    // 动画状态锁
+    let isAnimating = false;
+
     // 切换标签页
     function switchTab(tab) {
+      if (isAnimating) return; // 动画中禁止切换
+
       const tabDlt = document.getElementById('tab-dlt');
       const tabSsq = document.getElementById('tab-ssq');
       const contentDlt = document.getElementById('content-dlt');
@@ -704,14 +782,13 @@
     function updateDltInfo() {
       const redCount = parseInt(document.getElementById('dlt-red').value) || 5;
       const blueCount = parseInt(document.getElementById('dlt-blue').value) || 2;
-      
-      // 限制范围
+
       document.getElementById('dlt-red').value = Math.min(30, Math.max(5, redCount));
       document.getElementById('dlt-blue').value = Math.min(10, Math.max(2, blueCount));
-      
+
       const notes = combination(redCount, 5) * combination(blueCount, 2);
       const amount = notes * 2;
-      
+
       document.getElementById('dlt-info').innerHTML = `
         <span class="text-gray-400">注数: <span class="text-yellow-400 font-bold">${notes}</span> 注</span>
         <span class="text-gray-400">金额: <span class="text-yellow-400 font-bold">${amount}</span> 元</span>
@@ -722,14 +799,13 @@
     function updateSsqInfo() {
       const redCount = parseInt(document.getElementById('ssq-red').value) || 6;
       const blueCount = parseInt(document.getElementById('ssq-blue').value) || 1;
-      
-      // 限制范围
+
       document.getElementById('ssq-red').value = Math.min(27, Math.max(6, redCount));
       document.getElementById('ssq-blue').value = Math.min(15, Math.max(1, blueCount));
-      
+
       const notes = combination(redCount, 6) * blueCount;
       const amount = notes * 2;
-      
+
       document.getElementById('ssq-info').innerHTML = `
         <span class="text-gray-400">注数: <span class="text-yellow-400 font-bold">${notes}</span> 注</span>
         <span class="text-gray-400">金额: <span class="text-yellow-400 font-bold">${amount}</span> 元</span>
@@ -753,99 +829,160 @@
       return num.toString().padStart(2, '0');
     }
 
-    // 创建彩球HTML
-    function createBall(number, type) {
-      return `<div class="ball ball-${type}">${formatNumber(number)}</div>`;
+    // 通用球体动画生成函数
+    async function animateBalls(containerId, redNumbers, blueNumbers, type) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = ''; // 清空当前内容
+      const delay = 80; // 每个球出现的间隔时间
+
+      // 1. 生成红球
+      for (let num of redNumbers) {
+        const ball = document.createElement('div');
+        ball.className = 'ball ball-red';
+        ball.textContent = formatNumber(num);
+        container.appendChild(ball);
+
+        // 触发回流，确保动画播放
+        await new Promise(r => setTimeout(r, delay));
+        ball.classList.add('animate-appear');
+      }
+
+      // 2. 生成分隔线
+      const sep = document.createElement('div');
+      sep.className = 'separator';
+      container.appendChild(sep);
+      await new Promise(r => setTimeout(r, 50));
+
+      // 3. 生成蓝球
+      for (let num of blueNumbers) {
+        const ball = document.createElement('div');
+        ball.className = 'ball ball-blue';
+        ball.textContent = formatNumber(num);
+        container.appendChild(ball);
+
+        await new Promise(r => setTimeout(r, delay));
+        ball.classList.add('animate-appear');
+      }
+
+      // 4. 动画结束后添加跳动效果 (修复消失bug)
+      setTimeout(() => {
+        const balls = container.querySelectorAll('.ball');
+        balls.forEach(ball => {
+          ball.classList.remove('animate-appear'); // 移除进场动画
+          ball.classList.add('show');            // 锁定显示状态（关键修复）
+          ball.classList.add('bounce');          // 添加跳动动画
+        });
+      }, 500); // 等待最后一个球的动画完成(0.5s)
     }
 
     // 生成大乐透号码
-    function generateDlt() {
+    async function generateDlt() {
+      if (isAnimating) return;
+      isAnimating = true;
+      const btn = document.getElementById('btn-dlt');
+      const copyBtn = document.getElementById('btn-copy-dlt');
+      btn.disabled = true;
+      copyBtn.classList.add('hidden'); // 隐藏复制按钮
+
       const redCount = parseInt(document.getElementById('dlt-red').value) || 5;
       const blueCount = parseInt(document.getElementById('dlt-blue').value) || 2;
-      
+
       const redBalls = generateRandomNumbers(35, redCount);
       const blueBalls = generateRandomNumbers(12, blueCount);
-      
-      const resultDiv = document.getElementById('dlt-result');
-      resultDiv.innerHTML = '';
-      
-      // 添加红球
-      redBalls.forEach((num, index) => {
-        setTimeout(() => {
-          resultDiv.innerHTML += createBall(num, 'red');
-        }, index * 100);
-      });
-      
-      // 添加分隔线
-      setTimeout(() => {
-        resultDiv.innerHTML += '<div class="separator"></div>';
-      }, redCount * 100);
-      
-      // 添加蓝球
-      blueBalls.forEach((num, index) => {
-        setTimeout(() => {
-          resultDiv.innerHTML += createBall(num, 'blue');
-        }, (redCount + 1 + index) * 100);
-      });
 
-      // 添加弹跳动画
-      setTimeout(() => {
-        document.querySelectorAll('#dlt-result .ball').forEach(ball => {
-          ball.classList.add('bounce');
-        });
-      }, (redCount + blueCount + 1) * 100 + 500);
+      // 保存数据用于复制
+      currentNumbers.dlt.red = redBalls.map(formatNumber);
+      currentNumbers.dlt.blue = blueBalls.map(formatNumber);
+
+      await animateBalls('dlt-result', redBalls, blueBalls, 'dlt');
+
+      btn.disabled = false;
+      copyBtn.classList.remove('hidden'); // 显示复制按钮
+      isAnimating = false;
     }
 
     // 生成双色球号码
-    function generateSsq() {
+    async function generateSsq() {
+      if (isAnimating) return;
+      isAnimating = true;
+      const btn = document.getElementById('btn-ssq');
+      const copyBtn = document.getElementById('btn-copy-ssq');
+      btn.disabled = true;
+      copyBtn.classList.add('hidden');
+
       const redCount = parseInt(document.getElementById('ssq-red').value) || 6;
       const blueCount = parseInt(document.getElementById('ssq-blue').value) || 1;
-      
+
       const redBalls = generateRandomNumbers(33, redCount);
       const blueBalls = generateRandomNumbers(16, blueCount);
-      
-      const resultDiv = document.getElementById('ssq-result');
-      resultDiv.innerHTML = '';
-      
-      // 添加红球
-      redBalls.forEach((num, index) => {
-        setTimeout(() => {
-          resultDiv.innerHTML += createBall(num, 'red');
-        }, index * 100);
-      });
-      
-      // 添加分隔线
-      setTimeout(() => {
-        resultDiv.innerHTML += '<div class="separator"></div>';
-      }, redCount * 100);
-      
-      // 添加蓝球
-      blueBalls.forEach((num, index) => {
-        setTimeout(() => {
-          resultDiv.innerHTML += createBall(num, 'blue');
-        }, (redCount + 1 + index) * 100);
-      });
 
-      // 添加弹跳动画
-      setTimeout(() => {
-        document.querySelectorAll('#ssq-result .ball').forEach(ball => {
-          ball.classList.add('bounce');
+      // 保存数据用于复制
+      currentNumbers.ssq.red = redBalls.map(formatNumber);
+      currentNumbers.ssq.blue = blueBalls.map(formatNumber);
+
+      await animateBalls('ssq-result', redBalls, blueBalls, 'ssq');
+
+      btn.disabled = false;
+      copyBtn.classList.remove('hidden');
+      isAnimating = false;
+    }
+
+    // 复制功能
+    function copyNumbers(type) {
+      const data = currentNumbers[type];
+      if (!data.red.length) return;
+
+      // 格式：红区：01 02，蓝区：03 04
+      const text = `红区：${data.red.join(' ')}，蓝区：${data.blue.join(' ')}`;
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(showToast).catch(err => {
+          fallbackCopy(text);
         });
-      }, (redCount + blueCount + 1) * 100 + 500);
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    // 兼容性复制方案
+    function fallbackCopy(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast();
+      } catch (err) {
+        alert("复制失败，请手动复制");
+      }
+      document.body.removeChild(textArea);
+    }
+
+    // 显示 Toast
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.className = 'show';
+      setTimeout(() => {
+        toast.className = '';
+      }, 2000);
     }
 
     // 折叠面板切换
     function toggleAccordion(header) {
       const content = header.nextElementSibling;
       const isActive = header.classList.contains('active');
-      
+
       // 关闭同级所有面板
       const parent = header.parentElement.parentElement;
       parent.querySelectorAll('.accordion-header').forEach(h => {
         h.classList.remove('active');
         h.nextElementSibling.classList.remove('active');
       });
-      
+
       // 如果之前不是激活状态，则打开
       if (!isActive) {
         header.classList.add('active');
@@ -858,4 +995,5 @@
     updateSsqInfo();
   </script>
 </body>
+
 </html>
