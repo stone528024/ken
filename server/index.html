@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 流式打字机测试</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        #chat-box {
+            border: 1px solid #ccc;
+            padding: 15px;
+            min-height: 200px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        input {
+            width: 70%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #ccc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>我的第一个 AI 流式对话</h2>
+
+    <div id="chat-box">等待提问...</div>
+
+    <div>
+        <input type="text" id="user-input" placeholder="输入你想问的问题，比如：写一首关于秋天的诗" />
+        <button id="send-btn">发送</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        sendBtn.addEventListener('click', async () => {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // UI 状态重置
+            chatBox.innerHTML = '';
+            userInput.value = '';
+            sendBtn.disabled = true;
+            sendBtn.innerText = '思考中...';
+
+            try {
+                // 1. 发起 Fetch 请求
+                const response = await fetch('http://localhost:3000/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                // 2. 获取数据流阅读器
+                const reader = response.body.getReader();
+
+                // 3. 创建文本解码器 (把二进制流转换成中文字符串)
+                const decoder = new TextDecoder('utf-8');
+
+                // 4. 循环读取流数据
+                while (true) {
+                    // done 表示是否结束，value 是当前读取到的二进制数据块
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        break; // 数据读完了，退出循环
+                    }
+
+                    // 将二进制解码为文本，并追加到聊天框 (stream: true 保证中文被截断时不会乱码)
+                    const chunkText = decoder.decode(value, { stream: true });
+                    chatBox.innerHTML += chunkText;
+
+                    // 自动滚动到最底部
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+            } catch (error) {
+                chatBox.innerHTML = '请求失败，请检查后端是否启动。';
+            } finally {
+                // 恢复按钮状态
+                sendBtn.disabled = false;
+                sendBtn.innerText = '发送';
+            }
+        });
+
+        // 支持回车发送
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendBtn.click();
+        });
+    </script>
+</body>
+
+</html>

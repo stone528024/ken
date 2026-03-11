@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 流式打字机 - EventSource版</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        #chat-box {
+            border: 1px solid #ccc;
+            padding: 15px;
+            min-height: 200px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #f8fdf8;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        input {
+            width: 70%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            background: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #ccc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>AI 流式对话 (EventSource/GET 版)</h2>
+
+    <div id="chat-box">等待提问...</div>
+
+    <div>
+        <input type="text" id="user-input" placeholder="写一段介绍 Node.js 的话" />
+        <button id="send-btn">发送</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // 保存 eventSource 实例，方便随时停止
+        let eventSource = null;
+
+        sendBtn.addEventListener('click', () => {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // UI 状态重置
+            chatBox.innerHTML = '';
+            userInput.value = '';
+            sendBtn.disabled = true;
+            sendBtn.innerText = '接收中...';
+
+            // 【重点1】：GET 请求，参数必须拼在 URL 后面，并用 encodeURIComponent 编码处理特殊字符
+            const url = `http://localhost:3000/api/chat-sse?message=${encodeURIComponent(message)}`;
+
+            // 【重点2】：创建 EventSource 实例，建立连接
+            eventSource = new EventSource(url);
+
+            // 【重点3】：监听后端发来的消息
+            eventSource.onmessage = function (event) {
+                // 收到后端发来的结束信号
+                if (event.data === '[DONE]') {
+                    closeConnection();
+                    return;
+                }
+
+                try {
+                    // 解析后端发来的 JSON 包装数据
+                    const parsedData = JSON.parse(event.data);
+
+                    if (parsedData.text) {
+                        chatBox.innerHTML += parsedData.text;
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    } else if (parsedData.error) {
+                        chatBox.innerHTML += `\n[错误: ${parsedData.error}]`;
+                    }
+                } catch (e) {
+                    console.error("解析数据失败:", e, event.data);
+                }
+            };
+
+            // 监听连接错误（包含后端异常断开）
+            eventSource.onerror = function (error) {
+                console.error("EventSource 连接出错", error);
+                chatBox.innerHTML += '\n[连接已断开]';
+                closeConnection();
+            };
+        });
+
+        // 关闭连接的公共方法
+        function closeConnection() {
+            if (eventSource) {
+                // 【重点4】：必须手动调用 close()，否则浏览器会自动无限重连！
+                eventSource.close();
+            }
+            sendBtn.disabled = false;
+            sendBtn.innerText = '发送';
+        }
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendBtn.click();
+        });
+    </script>
+</body>
+
+</html>
