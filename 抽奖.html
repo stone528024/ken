@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2024 荣耀盛典 - 抽奖系统</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* =========================================
+       1. 全局与背景层
+       ========================================= */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            position: relative;
+            min-height: 100vh;
+            background-color: #050505;
+            color: #fff;
+            font-family: 'Rajdhani', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .holographic-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: linear-gradient(rgba(0, 255, 204, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 204, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            animation: gridMove 20s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes gridMove {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 0 400px;
+            }
+        }
+
+        /* =========================================
+       2. 顶部标题
+       ========================================= */
+        .header {
+            z-index: 10;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .glitch {
+            font-size: 3.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.8), 0 0 20px rgba(0, 255, 204, 0.4);
+            letter-spacing: 4px;
+        }
+
+        .subtitle {
+            font-family: 'Share Tech Mono', monospace;
+            color: #00ffcc;
+            opacity: 0.7;
+            letter-spacing: 8px;
+            margin-top: 10px;
+        }
+
+        /* =========================================
+       3. 核心全息舱 (老虎机)
+       ========================================= */
+        .stage {
+            z-index: 10;
+            width: 700px;
+            height: 240px;
+            position: relative;
+            background: rgba(10, 15, 20, 0.8);
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.1), inset 0 0 50px rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+
+        .stage::before,
+        .stage::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 60%;
+            background: #00ffcc;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+
+        .stage::before {
+            left: -2px;
+        }
+
+        .stage::after {
+            right: -2px;
+        }
+
+        .slot-machine-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .mask {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .top-mask {
+            top: 0;
+            background: linear-gradient(to bottom, #050505 0%, transparent 100%);
+        }
+
+        .bottom-mask {
+            bottom: 0;
+            background: linear-gradient(to top, #050505 0%, transparent 100%);
+        }
+
+        .reel {
+            width: 100%;
+            padding-top: 40px;
+        }
+
+        .reel-item {
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 6px;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+        }
+
+        .reel-item.is-winner {
+            color: #00ffcc;
+            font-size: 5.5rem;
+            text-shadow: 0 0 20px #00ffcc, 0 0 40px #00ffcc, 0 0 80px rgba(0, 255, 204, 0.5);
+            animation: winnerPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes winnerPop {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+
+        /* =========================================
+       4. 控制台与按钮
+       ========================================= */
+        .control-panel {
+            margin-top: 50px;
+            z-index: 10;
+        }
+
+        .cyber-btn {
+            background: transparent;
+            border: 2px solid #00ffcc;
+            color: #00ffcc;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.8rem;
+            padding: 15px 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2) inset;
+        }
+
+        .cyber-btn:hover:not(:disabled) {
+            background: #00ffcc;
+            color: #000;
+            box-shadow: 0 0 30px #00ffcc, 0 0 15px #00ffcc inset;
+        }
+
+        .cyber-btn:disabled {
+            border-color: #555;
+            color: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* =========================================
+       5. 获奖记录列表
+       ========================================= */
+        .history-panel {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            text-align: center;
+            z-index: 10;
+            display: none;
+        }
+
+        .history-title {
+            font-family: 'Share Tech Mono', monospace;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .cyber-tag {
+            display: inline-block;
+            background: rgba(0, 255, 204, 0.1);
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 5px 15px;
+            border-radius: 4px;
+            margin: 5px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+        }
+
+        /* =========================================
+       6. 边缘功能键 (左侧导入，右侧作弊)
+       ========================================= */
+        .corner-trigger {
+            position: absolute;
+            bottom: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.1);
+            cursor: default;
+            z-index: 99;
+            transition: color 0.3s;
+        }
+
+        .corner-trigger:hover {
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+        }
+
+        .trigger-left {
+            left: 15px;
+        }
+
+        .trigger-right {
+            right: 15px;
+        }
+
+        /* =========================================
+       7. ㊙️ 作弊相关组件 (系统调试)
+       ========================================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .cyber-modal {
+            width: 480px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .modal-header {
+            color: #ff00ff;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .terminal-text {
+            color: #00ffcc;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .cyber-search-wrapper {
+            position: relative;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        .cyber-search-input {
+            width: 100%;
+            background: #000;
+            border: 1px solid #00ffcc;
+            color: #fff;
+            padding: 12px;
+            font-family: 'Share Tech Mono', 'Microsoft YaHei', monospace;
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.3s;
+        }
+
+        .cyber-search-input:focus {
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+        }
+
+        .cyber-search-input::placeholder {
+            color: rgba(0, 255, 204, 0.3);
+        }
+
+        .cyber-options-list {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: #050505;
+            border: 1px solid #00ffcc;
+            border-top: none;
+            max-height: 220px;
+            overflow-y: auto;
+            list-style: none;
+            z-index: 999;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .cyber-options-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .cyber-options-list::-webkit-scrollbar-thumb {
+            background: #00ffcc;
+            border-radius: 3px;
+        }
+
+        .cyber-options-list::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        .cyber-option {
+            padding: 12px;
+            color: #00ffcc;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+            transition: all 0.2s;
+        }
+
+        .cyber-option:hover {
+            background: #00ffcc;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .cyber-option.special {
+            color: #ff00ff;
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .btn-abort {
+            background: #333;
+            color: #fff;
+        }
+
+        .btn-abort:hover {
+            background: #555;
+        }
+
+        .btn-override {
+            background: #00ffcc;
+            color: #000;
+        }
+
+        .btn-override:hover {
+            background: #fff;
+            box-shadow: 0 0 15px #00ffcc;
+        }
+
+        /* 轻提示 (Toast) */
+        .cyber-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0a0a0a;
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 10px 20px;
+            font-family: 'Share Tech Mono', monospace;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .cyber-toast.show {
+            opacity: 1;
+            visibility: visible;
+            top: 40px;
+        }
+
+        .cyber-toast.warning {
+            border-color: #ffcc00;
+            color: #ffcc00;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="holographic-grid"></div>
+
+    <header class="header">
+        <h1 class="glitch">2024 星辰大海 · 荣耀盛典</h1>
+        <p class="subtitle">LUCK DRAW SYSTEM_</p>
+    </header>
+
+    <main class="stage">
+        <div class="slot-machine-container">
+            <div class="mask top-mask"></div>
+            <div class="mask bottom-mask"></div>
+            <div class="reel" id="reel">
+                <div class="reel-item">AWAITING DATA...</div>
+            </div>
+        </div>
+    </main>
+
+    <div class="control-panel">
+        <button class="cyber-btn" id="actionBtn" onclick="startDraw()">INITIATE DRAW</button>
+    </div>
+
+    <div class="history-panel" id="historyPanel">
+        <div class="history-title">WINNERS LOG</div>
+        <div id="tagsContainer"></div>
+    </div>
+
+    <!-- 左侧：重新加载名单数据 -->
+    <div class="corner-trigger trigger-left" onclick="loadUsersData()">
+        [ DATA.RELOAD ]
+    </div>
+
+    <!-- 右侧：㊙️ 伪装的作弊入口 -->
+    <div class="corner-trigger trigger-right" onclick="openCheatModal()">
+        SYS.VER // 2.0.4.build
+    </div>
+
+    <!-- ㊙️ 手写纯正赛博作弊弹窗 -->
+    <div class="modal-overlay" id="cheatModal">
+        <div class="cyber-modal">
+            <div class="modal-header">Terminal // System Debug</div>
+            <div class="terminal-text">>> Access Granted. Administrator mode active.</div>
+            <div class="terminal-text">>> Enter Target Entity to Override:</div>
+
+            <div class="cyber-search-wrapper" id="searchWrapper">
+                <input type="text" id="cheatSearchInput" class="cyber-search-input" placeholder="Type name to search..."
+                    autocomplete="off">
+                <ul id="cheatOptionsList" class="cyber-options-list">
+                    <!-- JS 动态渲染 -->
+                </ul>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn btn-abort" onclick="closeCheatModal()">ABORT</button>
+                <button class="modal-btn btn-override" onclick="confirmCheat()">OVERRIDE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cyber-toast" id="cyberToast"></div>
+
+    <script>
+        let allUsers = [];
+        let winners = [];
+        let isRolling = false;
+
+        let tempSelectedTarget = '';
+        let finalCheatTarget = '';
+
+        const ITEM_HEIGHT = 160;
+        const ROLL_ITEMS_COUNT = 50;
+
+        const reelEl = document.getElementById('reel');
+        const actionBtn = document.getElementById('actionBtn');
+        const historyPanel = document.getElementById('historyPanel');
+        const tagsContainer = document.getElementById('tagsContainer');
+        const toastEl = document.getElementById('cyberToast');
+
+        const cheatModal = document.getElementById('cheatModal');
+        const cheatSearchInput = document.getElementById('cheatSearchInput');
+        const cheatOptionsList = document.getElementById('cheatOptionsList');
+        const searchWrapper = document.getElementById('searchWrapper');
+
+        /* =========================================
+           🔥 自动读取本地文件名单 🔥
+           ========================================= */
+        async function loadUsersData() {
+            try {
+                // 使用 fetch 自动请求同目录下的 users.txt
+                const response = await fetch('./users.txt');
+                if (!response.ok) throw new Error('File not found or network error');
+                const text = await response.text();
+
+                // 分割换行，去除空格，过滤空行
+                allUsers = text.split('\n').map(i => i.trim()).filter(Boolean);
+
+                if (allUsers.length > 0) {
+                    reelEl.innerHTML = `<div class="reel-item">SYSTEM READY</div>`;
+                    showToast(`>> Success. Loaded ${allUsers.length} entities.`, 'success');
+                } else {
+                    showToast('>> Failed. users.txt is empty.', 'warning');
+                }
+            } catch (error) {
+                console.error("加载名单失败:", error);
+                showToast('>> Fetch Fail. Needs HTTP Server (Not file://)', 'warning');
+                reelEl.innerHTML = `<div class="reel-item" style="color:#ffcc00; font-size: 2rem;">RUN ON LOCAL SERVER</div>`;
+            }
+        }
+
+        // 页面启动时自动加载名单
+        window.addEventListener('DOMContentLoaded', loadUsersData);
+
+        function getAvailableUsers() {
+            return allUsers.filter(u => !winners.includes(u));
+        }
+
+        /* =========================================
+           核心抽奖逻辑
+           ========================================= */
+        function startDraw() {
+            if (allUsers.length === 0) return showToast('>> ERR: Data not loaded. Check users.txt or Server.', 'warning');
+            const availableUsers = getAvailableUsers();
+            if (availableUsers.length === 0) return showToast('奖池已空！', 'warning');
+            if (isRolling) return;
+
+            isRolling = true;
+            actionBtn.disabled = true;
+            actionBtn.innerText = 'SYSTEM ROLLING...';
+
+            let finalWinner = '';
+            if (finalCheatTarget && availableUsers.includes(finalCheatTarget)) {
+                finalWinner = finalCheatTarget;
+            } else {
+                const rIndex = Math.floor(Math.random() * availableUsers.length);
+                finalWinner = availableUsers[rIndex];
+            }
+
+            const newList = [];
+            const poolWithoutWinner = availableUsers.filter(u => u !== finalWinner);
+            const safePool = poolWithoutWinner.length > 0 ? poolWithoutWinner : availableUsers;
+
+            for (let i = 0; i < ROLL_ITEMS_COUNT - 1; i++) {
+                let randomUser;
+                do {
+                    const rIndex = Math.floor(Math.random() * safePool.length);
+                    randomUser = safePool[rIndex];
+                } while (newList.length > 0 && randomUser === newList[newList.length - 1] && safePool.length > 1);
+                newList.push(randomUser);
+            }
+
+            newList.push(finalWinner);
+            renderReel(newList);
+
+            reelEl.style.transition = 'none';
+            reelEl.style.transform = `translateY(0px)`;
+            void reelEl.offsetHeight;
+
+            setTimeout(() => {
+                reelEl.style.transition = `transform 4.5s cubic-bezier(0.15, 0.85, 0.15, 1)`;
+                const targetY = -(ROLL_ITEMS_COUNT - 1) * ITEM_HEIGHT;
+                reelEl.style.transform = `translateY(${targetY}px)`;
+
+                setTimeout(() => {
+                    onRollEnd(finalWinner);
+                }, 4500);
+            }, 50);
+        }
+
+        function renderReel(list) {
+            reelEl.innerHTML = list.map(name => `<div class="reel-item">${name}</div>`).join('');
+        }
+
+        function onRollEnd(winner) {
+            isRolling = false;
+            actionBtn.disabled = false;
+            actionBtn.innerText = 'INITIATE DRAW';
+            reelEl.lastElementChild.classList.add('is-winner');
+
+            winners.push(winner);
+            updateHistoryPanel();
+
+            finalCheatTarget = '';
+            fireCyberConfetti();
+        }
+
+        function updateHistoryPanel() {
+            historyPanel.style.display = 'block';
+            tagsContainer.innerHTML = winners.map(w => `<span class="cyber-tag">${w}</span>`).join('');
+        }
+
+        /* =========================================
+           搜索与自定义下拉列表逻辑
+           ========================================= */
+        function renderOptions(filterText = '') {
+            const availableUsers = getAvailableUsers();
+            let html = `<li class="cyber-option special" data-value="">[ Auto Random (取消内定) ]</li>`;
+
+            const filtered = availableUsers.filter(u => u.toLowerCase().includes(filterText.toLowerCase()));
+
+            if (filtered.length === 0) {
+                html += `<li class="cyber-option" style="color:#555; cursor:not-allowed;">No entity found...</li>`;
+            } else {
+                filtered.forEach(u => {
+                    html += `<li class="cyber-option" data-value="${u}">${u}</li>`;
+                });
+            }
+            cheatOptionsList.innerHTML = html;
+        }
+
+        cheatSearchInput.addEventListener('input', (e) => {
+            renderOptions(e.target.value);
+            cheatOptionsList.style.display = 'block';
+        });
+
+        cheatSearchInput.addEventListener('focus', () => {
+            renderOptions('');
+            cheatSearchInput.value = '';
+            cheatOptionsList.style.display = 'block';
+        });
+
+        cheatOptionsList.addEventListener('click', (e) => {
+            const targetLi = e.target.closest('.cyber-option');
+            if (!targetLi || targetLi.hasAttribute('style')) return;
+
+            const val = targetLi.getAttribute('data-value');
+            tempSelectedTarget = val;
+
+            cheatSearchInput.value = val ? val : '[ Auto Random ]';
+            cheatOptionsList.style.display = 'none';
+        });
+
+        // 🔥 修复 Bug: 监听全局点击事件，如果点到框外，收起下拉列表 🔥
+        document.addEventListener('click', (e) => {
+            // 如果点击的目标不在 searchWrapper (包含输入框和下拉列表) 内，就隐藏下拉列表
+            if (searchWrapper && !searchWrapper.contains(e.target)) {
+                cheatOptionsList.style.display = 'none';
+            }
+        });
+
+        /* =========================================
+           弹窗开关逻辑
+           ========================================= */
+        function openCheatModal() {
+            if (allUsers.length === 0) return showToast('>> ERR: Data not loaded.', 'warning');
+            tempSelectedTarget = finalCheatTarget;
+            cheatSearchInput.value = finalCheatTarget ? finalCheatTarget : '';
+            cheatOptionsList.style.display = 'none';
+            cheatModal.style.display = 'flex';
+        }
+
+        function closeCheatModal() {
+            cheatModal.style.display = 'none';
+            cheatOptionsList.style.display = 'none';
+        }
+
+        function confirmCheat() {
+            finalCheatTarget = tempSelectedTarget;
+            closeCheatModal();
+            if (finalCheatTarget) {
+                showToast(`>> Target Locked: [${finalCheatTarget}].`);
+            } else {
+                showToast('>> System Restored to Random Mode.');
+            }
+        }
+
+        /* =========================================
+           特效工具 (Toast / Confetti)
+           ========================================= */
+        let toastTimer = null;
+        function showToast(msg, type = 'success') {
+            toastEl.innerText = msg;
+            toastEl.className = `cyber-toast show ${type}`;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toastEl.className = 'cyber-toast'; }, 3000);
+        }
+
+        function fireCyberConfetti() {
+            const count = 200;
+            const defaults = { origin: { y: 0.7 }, zIndex: 9999, colors: ['#00ffcc', '#ff00ff', '#ffffff', '#ffd700'] };
+            function fire(particleRatio, opts) {
+                confetti(Object.assign({}, defaults, opts, { particleCount: Math.floor(count * particleRatio) }));
+            }
+            fire(0.25, { spread: 26, startVelocity: 55 }); fire(0.2, { spread: 60 });
+            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+            fire(0.1, { spread: 120, startVelocity: 45 });
+        }
+    </script>
+</body>
+
+</html>
