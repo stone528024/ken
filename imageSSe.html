@@ -4,164 +4,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>商品图片智能打标签</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            padding: 20px;
-            background: #f0f2f5;
+        /* 自定义一些小动画 */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            border: 1px solid #d9d9d9;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        input[type="text"]:focus {
-            border-color: #1677ff;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
-        }
-
-        button {
-            background: #1677ff;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            width: 100%;
-            transition: background 0.3s;
-        }
-
-        button:disabled {
-            background: #b1d5ff;
-            cursor: not-allowed;
-        }
-
-        button:hover:not(:disabled) {
-            background: #4096ff;
-        }
-
-        .preview-box {
-            margin-top: 10px;
-            max-width: 200px;
-            border: 1px dashed #d9d9d9;
-            border-radius: 6px;
-            padding: 5px;
+        /* 隐藏原生的文件上传按钮 */
+        input[type="file"] {
             display: none;
-            text-align: center;
-        }
-
-        .preview-box img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-        }
-
-        .result-container {
-            margin-top: 30px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
-        }
-
-        .result-box {
-            background: #282c34;
-            color: #abb2bf;
-            padding: 15px;
-            border-radius: 6px;
-            overflow-x: auto;
-            font-family: monospace;
-            font-size: 14px;
-            min-height: 100px;
-            white-space: pre-wrap;
-        }
-
-        .status-text {
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        .success {
-            color: #52c41a;
-        }
-
-        .error {
-            color: #ff4d4f;
         }
     </style>
 </head>
 
-<body>
+<body class="bg-gray-50 min-h-screen text-gray-800 font-sans p-4 md:p-8">
 
-    <div class="container">
-        <h2>商品图片打标签 - 工作流测试</h2>
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
 
-        <div class="form-group">
-            <label>上传本地商品图片:</label>
-            <input type="file" id="imageFileInput" accept="image/*" onchange="previewLocalImage(event)"
-                style="margin-bottom: 10px;">
-            <!-- <div style="font-size: 12px; color: #888; margin-bottom: 10px;">或者输入图片URL:</div> -->
-            <input type="text" id="imageUrlInput" placeholder="例如: https://example.com/product.jpg"
-                oninput="previewImageUrl()" value="" style="display: none;">
-
-            <!-- 图片预览区域 -->
-            <div id="imagePreview" class="preview-box">
-                <img id="previewImg" src="" alt="预览图片">
-            </div>
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center">
+            <h2 class="text-2xl font-bold tracking-wider">AI 商品图片视觉分析</h2>
+            <p class="text-blue-100 mt-2 text-sm">上传商品图片，自动生成主题描述与语义标签</p>
         </div>
 
-        <button id="sendBtn" onclick="sendRequest()">提交图片进行分析</button>
+        <div class="p-6 md:p-8">
+            <!-- 上传区域 -->
+            <div class="mb-8">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">上传本地图片</label>
+                <!-- 点击这里触发隐藏的 input -->
+                <label for="imageFileInput" id="uploadArea"
+                    class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-blue-50 hover:border-blue-400 transition-all duration-300 relative overflow-hidden">
 
-        <div class="result-container">
-            <div id="statusText" class="status-text">等待测试...</div>
-            <label>返回的 final_result 结果：</label>
-            <div id="resultBox" class="result-box">{}</div>
+                    <div id="uploadHint" class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                            </path>
+                        </svg>
+                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">点击上传</span> 或拖拽图片到此处</p>
+                        <p class="text-xs text-gray-400">支持 PNG, JPG, JPEG</p>
+                    </div>
+
+                    <!-- 预览图（绝对定位覆盖在上方） -->
+                    <img id="previewImg" class="hidden absolute inset-0 w-full h-full object-contain bg-black/5" src=""
+                        alt="预览图片">
+                </label>
+                <input type="file" id="imageFileInput" accept="image/*" onchange="previewLocalImage(event)">
+            </div>
+
+            <!-- 提交按钮 -->
+            <button id="sendBtn" onclick="sendRequest()"
+                class="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors">
+                <span>提交图片进行分析</span>
+                <!-- 加载动画图标 (默认隐藏) -->
+                <svg id="loadingIcon" class="hidden animate-spin ml-2 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </button>
+
+            <!-- 状态提示 -->
+            <div id="statusText" class="mt-4 text-center text-sm font-medium text-gray-500 hidden"></div>
+
+            <!-- 漂亮的结果展示区域 -->
+            <div id="resultContainer" class="hidden mt-8 pt-8 border-t border-gray-100 fade-in">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                    <span class="w-2 h-6 bg-green-500 rounded-full mr-2"></span>
+                    分析结果
+                </h3>
+
+                <div class="space-y-6">
+                    <!-- 主题描述 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">主题描述</h4>
+                        <div id="resDescription"
+                            class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-800 font-medium leading-relaxed">
+                            --
+                        </div>
+                    </div>
+
+                    <!-- 语义标签 -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">语义标签</h4>
+                        <div id="resTags" class="flex flex-wrap gap-2">
+                            <!-- 标签将在这里动态生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 预处理图片 -->
+                    <div id="resImageContainer" class="hidden">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">预处理图片</h4>
+                        <img id="resProcessedImg" src="" alt="处理后的图片"
+                            class="rounded-lg shadow-sm border border-gray-200 max-w-full h-auto max-h-64 object-contain bg-gray-50">
+                    </div>
+
+                    <!-- 如果解析失败，兜底显示的原始 JSON -->
+                    <div id="rawJsonContainer" class="hidden mt-4">
+                        <h4 class="text-xs font-semibold text-red-400 mb-1">原始数据 (Debug)</h4>
+                        <div id="resultBox"
+                            class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-xs whitespace-pre-wrap">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script>
+        // --- 配置区域 ---
         const YOUR_TOKEN = 'pat_1ldLe3d3HuZB8lWwYUGDqSb2Pdg2ZUyJLnedHU0AT9nMrZw3CM9ubCo2HAFGAsQx';
         const ANALYZE_API_URL = 'http://localhost:3000/api/analyze-image';
         const UPLOAD_API_URL = 'http://localhost:3000/api/upload';
 
+        // --- DOM 元素 ---
         const imageFileInput = document.getElementById('imageFileInput');
-        const imageUrlInput = document.getElementById('imageUrlInput');
         const sendBtn = document.getElementById('sendBtn');
-        const resultBox = document.getElementById('resultBox');
+        const loadingIcon = document.getElementById('loadingIcon');
         const statusText = document.getElementById('statusText');
-        const imagePreview = document.getElementById('imagePreview');
+
+        const uploadHint = document.getElementById('uploadHint');
         const previewImg = document.getElementById('previewImg');
+        const uploadArea = document.getElementById('uploadArea');
+
+        const resultContainer = document.getElementById('resultContainer');
+        const resDescription = document.getElementById('resDescription');
+        const resTags = document.getElementById('resTags');
+        const resImageContainer = document.getElementById('resImageContainer');
+        const resProcessedImg = document.getElementById('resProcessedImg');
+        const rawJsonContainer = document.getElementById('rawJsonContainer');
+        const resultBox = document.getElementById('resultBox');
 
         let selectedFile = null;
 
+        // 本地预览图片
         function previewLocalImage(event) {
             const file = event.target.files[0];
             if (file) {
@@ -169,78 +164,75 @@
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     previewImg.src = e.target.result;
-                    imagePreview.style.display = 'block';
+                    previewImg.classList.remove('hidden');
+                    uploadHint.classList.add('hidden');
+                    uploadArea.classList.remove('border-dashed', 'border-gray-300');
+                    uploadArea.classList.add('border-solid', 'border-blue-400', 'shadow-md');
                 }
                 reader.readAsDataURL(file);
-                // 清空远程URL输入框避免歧义
-                imageUrlInput.value = '';
+
+                // 隐藏之前的结果
+                resultContainer.classList.add('hidden');
             }
         }
 
-        function previewImageUrl() {
-            const url = imageUrlInput.value.trim();
-            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-                previewImg.src = url;
-                imagePreview.style.display = 'block';
-                previewImg.onerror = () => { imagePreview.style.display = 'none'; };
+        // 修改UI状态函数
+        function setUIState(isProcessing, statusMsg, isError = false) {
+            sendBtn.disabled = isProcessing;
+            statusText.classList.remove('hidden', 'text-green-600', 'text-red-500', 'text-gray-500');
 
-                // 清空本地文件选择避免歧义
-                imageFileInput.value = '';
-                selectedFile = null;
+            if (isProcessing) {
+                sendBtn.querySelector('span').innerText = '正在分析中...';
+                loadingIcon.classList.remove('hidden');
+                statusText.classList.add('text-gray-500');
             } else {
-                imagePreview.style.display = 'none';
+                sendBtn.querySelector('span').innerText = '提交图片进行分析';
+                loadingIcon.classList.add('hidden');
+                statusText.classList.add(isError ? 'text-red-500' : 'text-green-600');
             }
+            statusText.innerText = statusMsg;
         }
 
+        // 发送请求
         async function sendRequest() {
-            let targetImageUrl = imageUrlInput.value.trim();
-
-            if (!YOUR_TOKEN || YOUR_TOKEN.includes('在这里替换')) {
-                alert('请先在代码里配置 YOUR_TOKEN！');
-                return;
-            }
-            if (!targetImageUrl && !selectedFile) {
-                alert('请上传本地图片或输入网址！');
+            if (!selectedFile) {
+                alert('请先上传一张图片！');
                 return;
             }
 
-            sendBtn.disabled = true;
-            sendBtn.innerText = selectedFile ? '正在上传并分析...' : '分析中，这可能需要几十秒...';
-            statusText.innerText = selectedFile ? '步骤 1/2: 正在上传本地图片到大模型...' : '请求已发送，等待大模型响应...';
-            statusText.className = 'status-text';
-            resultBox.innerText = '加载中...';
+            setUIState(true, '步骤 1/2: 正在上传图片到存储服务器...');
+            resultContainer.classList.add('hidden');
+            rawJsonContainer.classList.add('hidden');
 
             try {
-                // 如果有本地文件，先走我们刚写的 /api/upload 代理接口
-                if (selectedFile) {
-                    const formData = new FormData();
-                    formData.append('file', selectedFile);
+                // 1. 上传图片获取 URL 或 ID
+                const formData = new FormData();
+                formData.append('file', selectedFile);
 
-                    const uploadRes = await fetch(UPLOAD_API_URL, {
-                        method: 'POST',
-                        body: formData
-                    });
+                const uploadRes = await fetch(UPLOAD_API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
 
-                    if (!uploadRes.ok) throw new Error(`上传图片失败 HTTP: ${uploadRes.status}`);
+                if (!uploadRes.ok) throw new Error(`上传图片失败 HTTP: ${uploadRes.status}`);
 
-                    const uploadData = await uploadRes.json();
-                    if (uploadData.code !== '00000' || !uploadData.data) {
-                        throw new Error(`Coze服务器上传错误: ${JSON.stringify(uploadData)}`);
-                    }
-                    // 拿到 Coze 的文件 ID （V1 分析接口目前支持传文件 ID，或者如果它给 url 就传 url）
-                    targetImageUrl = uploadData.data[0];
-                    console.log(targetImageUrl, 'targetImageUrl');
+                const uploadData = await uploadRes.json();
 
-                    statusText.innerText = '步骤 2/2: 上传完毕！正在进行视觉分析中...';
+                // 注意：这里根据你实际后端的返回值取 url 或者 id
+                // 假设后端返回的是 { code:0, data: { id: "xxx" } }，或者是你图中的格式
+                let targetImageIdentifier = uploadData.data?.id || uploadData.data?.[0] || '';
+
+                if (!targetImageIdentifier) {
+                    throw new Error(`无法获取上传后的图片ID，返回值: ${JSON.stringify(uploadData)}`);
                 }
 
-                // --------- 开始组装最终分析请求 ---------
-                let fileType = "image";
+                setUIState(true, '步骤 2/2: 上传完毕！大模型正在进行视觉分析，请耐心等待...');
+
+                // 2. 调用 Coze 工作流分析接口
                 const requestBody = {
                     "product_image": {
-                        // 注意：如果 targetImageUrl 是纯数字也就是文件 ID，Coze 是支持识别文件 ID 的
-                        "url": targetImageUrl,
-                        "file_type": fileType
+                        "url": targetImageIdentifier,
+                        "file_type": "image"
                     }
                 };
 
@@ -255,25 +247,72 @@
 
                 const responseData = await response.json();
 
-                // 假设状态码正常且无明显报错字段就视为成功 (可按需调整判断逻辑)
                 if (response.ok && (!responseData.code || responseData.code === 0)) {
-                    statusText.innerText = '请求成功！';
-                    statusText.className = 'status-text success';
-                    resultBox.innerText = JSON.stringify(responseData.final_result, null, 2);
+                    setUIState(false, '分析成功！');
+                    renderBeautifulResult(responseData.final_result);
                 } else {
-                    statusText.innerText = `请求失败 (HTTP状态码: ${response.status})`;
-                    statusText.className = 'status-text error';
-                    resultBox.innerText = JSON.stringify(responseData, null, 2);
+                    throw new Error(`请求失败: ${JSON.stringify(responseData)}`);
                 }
 
             } catch (error) {
-                statusText.innerText = '网络请求发生异常！';
-                statusText.className = 'status-text error';
-                resultBox.innerText = error.message;
+                setUIState(false, '发生错误: ' + error.message, true);
                 console.error('Fetch error:', error);
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.innerText = '提交图片进行分析';
+            }
+        }
+
+        // 渲染美丽的 UI 结果
+        function renderBeautifulResult(finalResult) {
+            resultContainer.classList.remove('hidden');
+
+            // Coze 的 final_result 有时是一个对象，有时是一个 JSON 字符串，这里做兼容解析
+            let parsedData = finalResult;
+            if (typeof finalResult === 'string') {
+                try {
+                    parsedData = JSON.parse(finalResult);
+                } catch (e) {
+                    console.warn("final_result 不是标准JSON字符串，直接展示原文");
+                }
+            }
+
+            // 如果成功解析出对象
+            if (typeof parsedData === 'object' && parsedData !== null && parsedData["主题描述"]) {
+
+                // 1. 渲染描述
+                resDescription.innerText = parsedData["主题描述"] || "未提取到描述";
+
+                // 2. 渲染标签 (Tag)
+                resTags.innerHTML = '';
+                const tagsArray = parsedData["语义标签"] || [];
+                if (tagsArray.length > 0) {
+                    tagsArray.forEach(tag => {
+                        const span = document.createElement('span');
+                        span.className = 'px-3 py-1 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full text-sm font-medium shadow-sm';
+                        span.innerText = tag;
+                        resTags.appendChild(span);
+                    });
+                } else {
+                    resTags.innerHTML = '<span class="text-gray-400 text-sm">无标签</span>';
+                }
+
+                // 3. 渲染预处理图片
+                const imgUrl = parsedData["预处理图片URL"];
+                if (imgUrl) {
+                    resProcessedImg.src = imgUrl;
+                    resImageContainer.classList.remove('hidden');
+                } else {
+                    resImageContainer.classList.add('hidden');
+                }
+
+                rawJsonContainer.classList.add('hidden');
+
+            } else {
+                // 如果解析失败（比如工作流结构变了），兜底展示原始 JSON
+                rawJsonContainer.classList.remove('hidden');
+                resultBox.innerText = typeof finalResult === 'object' ? JSON.stringify(finalResult, null, 2) : finalResult;
+
+                resDescription.innerText = "数据格式无法解析，请查看下方原始数据";
+                resTags.innerHTML = '';
+                resImageContainer.classList.add('hidden');
             }
         }
     </script>
