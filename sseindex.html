@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background: #1677ff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background: #4096ff;
+    }
+
+    .output-box {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      background: #fafafa;
+      min-height: 200px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .log-box {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+      background: #282c34;
+      color: #abb2bf;
+      padding: 10px;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h2>流式接口 (SSE POST) 测试工具</h2>
+
+    <div class="form-group">
+      <label>提问内容 (Prompt):</label>
+      <textarea id="promptInput" placeholder="请输入你想测试的问题..."></textarea>
+    </div>
+
+    <button id="sendBtn" onclick="sendRequest()">发送请求并接收流</button>
+
+    <h3>最终回复内容：</h3>
+    <div id="output" class="output-box"></div>
+
+    <h3>实时事件日志 (Event Log)：</h3>
+    <div id="log" class="log-box"></div>
+  </div>
+
+  <script>
+    const YOUR_TOKEN = 'pat_1ldLe3d3HuZB8lWwYUGDqSb2Pdg2ZUyJLnedHU0AT9nMrZw3CM9ubCo2HAFGAsQx';
+    const API_URL = 'http://localhost:3000/api/stream_run';
+    const SESSION_ID = "YIcMIgcRo1E8e0nSaZUZz";
+    const PROJECT_ID = "7615940555989598250";
+
+    const outputDiv = document.getElementById('output');
+    const logDiv = document.getElementById('log');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function appendLog(text) {
+      logDiv.innerHTML += `<div>${text}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function sendRequest() {
+      const promptText = document.getElementById('promptInput').value.trim();
+
+      if (!YOUR_TOKEN || YOUR_TOKEN.includes('在这里替换')) {
+        alert('请先在代码里配置 YOUR_TOKEN！');
+        return;
+      }
+      if (!promptText) {
+        alert('请填写提问内容！');
+        return;
+      }
+
+      // 重置 UI
+      outputDiv.innerHTML = '';
+      logDiv.innerHTML = '';
+      sendBtn.disabled = true;
+      sendBtn.innerText = '接收中...';
+      appendLog('开始发起请求...');
+
+      // 构造 Request Body
+      const requestBody = {
+        "content": {
+          "query": {
+            "prompt": [
+              {
+                "type": "text",
+                "content": {
+                  "text": promptText
+                }
+              }
+            ]
+          }
+        },
+        "type": "query",
+        "session_id": SESSION_ID,
+        "project_id": PROJECT_ID
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${YOUR_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        appendLog('连接成功，开始读取流...');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            appendLog('----- 读取结束 (Stream Done) -----');
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+
+          let boundary = buffer.indexOf('\n\n');
+          while (boundary !== -1) {
+            const chunk = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            parseSSEChunk(chunk);
+            boundary = buffer.indexOf('\n\n');
+          }
+        }
+      } catch (error) {
+        appendLog(`<span style="color:red">请求发生错误: ${error.message}</span>`);
+        console.error('Fetch error:', error);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerText = '发送请求并接收流';
+      }
+    }
+
+    function parseSSEChunk(chunk) {
+      const lines = chunk.split('\n');
+      let eventType = 'message';
+      let dataStr = '';
+
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          eventType = line.substring(6).trim();
+        } else if (line.startsWith('data:')) {
+          dataStr = line.substring(5).trim();
+        }
+      }
+      if (dataStr) {
+        appendLog(`[事件: ${eventType}] 收到数据`);
+        try {
+          const dataObj = JSON.parse(dataStr);
+
+          // Coze 工作流的实际类型往往在 data 里的 type 字段
+          const cozeType = dataObj.type || eventType;
+
+          if (cozeType === 'answer' || cozeType === 'message') {
+            let deltaText = '';
+            // 兼容字符串形式和对象里面的 answer 字段
+            if (typeof dataObj.content === 'object' && dataObj.content !== null) {
+              deltaText = dataObj.content.answer || "";
+            } else {
+              deltaText = dataObj.content || dataObj.text || dataObj.answer || "";
+            }
+            if (deltaText) {
+              outputDiv.innerHTML += deltaText;
+            }
+          }
+          else if (cozeType === 'error') {
+            appendLog(`<span style="color:red">后端返回错误: ${JSON.stringify(dataObj)}</span>`);
+          }
+
+        } catch (e) {
+          if (eventType === 'answer' || eventType === 'message') {
+            outputDiv.innerHTML += dataStr;
+          }
+        }
+      }
+    }
+  </script>
+
+</body>
+
+</html>

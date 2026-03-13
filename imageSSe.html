@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #1677ff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+        }
+
+        button {
+            background: #1677ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        button:disabled {
+            background: #b1d5ff;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background: #4096ff;
+        }
+
+        .preview-box {
+            margin-top: 10px;
+            max-width: 200px;
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            padding: 5px;
+            display: none;
+            text-align: center;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .result-box {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 14px;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+
+        .status-text {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #52c41a;
+        }
+
+        .error {
+            color: #ff4d4f;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>商品图片打标签 - 工作流测试</h2>
+
+        <div class="form-group">
+            <label>上传本地商品图片:</label>
+            <input type="file" id="imageFileInput" accept="image/*" onchange="previewLocalImage(event)"
+                style="margin-bottom: 10px;">
+            <!-- <div style="font-size: 12px; color: #888; margin-bottom: 10px;">或者输入图片URL:</div> -->
+            <input type="text" id="imageUrlInput" placeholder="例如: https://example.com/product.jpg"
+                oninput="previewImageUrl()" value="" style="display: none;">
+
+            <!-- 图片预览区域 -->
+            <div id="imagePreview" class="preview-box">
+                <img id="previewImg" src="" alt="预览图片">
+            </div>
+        </div>
+
+        <button id="sendBtn" onclick="sendRequest()">提交图片进行分析</button>
+
+        <div class="result-container">
+            <div id="statusText" class="status-text">等待测试...</div>
+            <label>返回的 final_result 结果：</label>
+            <div id="resultBox" class="result-box">{}</div>
+        </div>
+    </div>
+
+    <script>
+        const YOUR_TOKEN = 'pat_1ldLe3d3HuZB8lWwYUGDqSb2Pdg2ZUyJLnedHU0AT9nMrZw3CM9ubCo2HAFGAsQx';
+        const ANALYZE_API_URL = 'http://localhost:3000/api/analyze-image';
+        const UPLOAD_API_URL = 'http://localhost:3000/api/upload';
+
+        const imageFileInput = document.getElementById('imageFileInput');
+        const imageUrlInput = document.getElementById('imageUrlInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const resultBox = document.getElementById('resultBox');
+        const statusText = document.getElementById('statusText');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+
+        let selectedFile = null;
+
+        function previewLocalImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImg.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+                // 清空远程URL输入框避免歧义
+                imageUrlInput.value = '';
+            }
+        }
+
+        function previewImageUrl() {
+            const url = imageUrlInput.value.trim();
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                previewImg.src = url;
+                imagePreview.style.display = 'block';
+                previewImg.onerror = () => { imagePreview.style.display = 'none'; };
+
+                // 清空本地文件选择避免歧义
+                imageFileInput.value = '';
+                selectedFile = null;
+            } else {
+                imagePreview.style.display = 'none';
+            }
+        }
+
+        async function sendRequest() {
+            let targetImageUrl = imageUrlInput.value.trim();
+
+            if (!YOUR_TOKEN || YOUR_TOKEN.includes('在这里替换')) {
+                alert('请先在代码里配置 YOUR_TOKEN！');
+                return;
+            }
+            if (!targetImageUrl && !selectedFile) {
+                alert('请上传本地图片或输入网址！');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.innerText = selectedFile ? '正在上传并分析...' : '分析中，这可能需要几十秒...';
+            statusText.innerText = selectedFile ? '步骤 1/2: 正在上传本地图片到大模型...' : '请求已发送，等待大模型响应...';
+            statusText.className = 'status-text';
+            resultBox.innerText = '加载中...';
+
+            try {
+                // 如果有本地文件，先走我们刚写的 /api/upload 代理接口
+                if (selectedFile) {
+                    const formData = new FormData();
+                    formData.append('file', selectedFile);
+
+                    const uploadRes = await fetch(UPLOAD_API_URL, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!uploadRes.ok) throw new Error(`上传图片失败 HTTP: ${uploadRes.status}`);
+
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.code !== '00000' || !uploadData.data) {
+                        throw new Error(`Coze服务器上传错误: ${JSON.stringify(uploadData)}`);
+                    }
+                    // 拿到 Coze 的文件 ID （V1 分析接口目前支持传文件 ID，或者如果它给 url 就传 url）
+                    targetImageUrl = uploadData.data[0];
+                    console.log(targetImageUrl, 'targetImageUrl');
+
+                    statusText.innerText = '步骤 2/2: 上传完毕！正在进行视觉分析中...';
+                }
+
+                // --------- 开始组装最终分析请求 ---------
+                let fileType = "image";
+                const requestBody = {
+                    "product_image": {
+                        // 注意：如果 targetImageUrl 是纯数字也就是文件 ID，Coze 是支持识别文件 ID 的
+                        "url": targetImageUrl,
+                        "file_type": fileType
+                    }
+                };
+
+                const response = await fetch(ANALYZE_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${YOUR_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const responseData = await response.json();
+
+                // 假设状态码正常且无明显报错字段就视为成功 (可按需调整判断逻辑)
+                if (response.ok && (!responseData.code || responseData.code === 0)) {
+                    statusText.innerText = '请求成功！';
+                    statusText.className = 'status-text success';
+                    resultBox.innerText = JSON.stringify(responseData.final_result, null, 2);
+                } else {
+                    statusText.innerText = `请求失败 (HTTP状态码: ${response.status})`;
+                    statusText.className = 'status-text error';
+                    resultBox.innerText = JSON.stringify(responseData, null, 2);
+                }
+
+            } catch (error) {
+                statusText.innerText = '网络请求发生异常！';
+                statusText.className = 'status-text error';
+                resultBox.innerText = error.message;
+                console.error('Fetch error:', error);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerText = '提交图片进行分析';
+            }
+        }
+    </script>
+
+</body>
+
+</html>
