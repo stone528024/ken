@@ -10,7 +10,7 @@ const pdfParse = require('pdf-parse');
 // ==========================================
 // 👉 配置你的 Gemini API Key
 // ==========================================
-const GEMINI_API_KEY = 'AIzaSyA2OoExYtz2OZdht4XYd41Aie17U8HPswY';
+const GEMINI_API_KEY = '';
 
 const app = express();
 // 核心修复：允许前端读取后端生成的新文件名和新后缀！
