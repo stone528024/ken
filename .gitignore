@@ -29,3 +29,4 @@ node_modules/
 
 #忽略.hbuilderx目录
 .hbuilderx
+.env
