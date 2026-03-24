@@ -11,7 +11,7 @@ const pdfParse = require('pdf-parse');
 // 👉 配置你的 Gemini API Key
 // ==========================================
 const GEMINI_API_KEY = process.env.API_KEY;
-
+require('dotenv').config(); // 加这一行，本地就会自动读取 .env 文件
 const app = express();
 // 核心修复：允许前端读取后端生成的新文件名和新后缀！
 app.use(cors({ exposedHeaders: ['Content-Disposition'] }));
@@ -276,9 +276,10 @@ app.post('/api/translate', upload.single('file'), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`\n=========================================`);
-    console.log(`🚀 NEXUS AI 极致排版翻译中枢已启动！`);
-    console.log(`🌐 请在浏览器访问: http://localhost:${PORT}`);
-    console.log(`=========================================\n`);
-});
+// app.listen(PORT, () => {
+//     console.log(`\n=========================================`);
+//     console.log(`🚀 NEXUS AI 极致排版翻译中枢已启动！`);
+//     console.log(`🌐 请在浏览器访问: http://localhost:${PORT}`);
+//     console.log(`=========================================\n`);
+// });
+module.exports = app; 
