@@ -13,7 +13,10 @@ const { Document, Packer, Paragraph, TextRun } = docx;
 // ==========================================
 require('dotenv').config(); // 本地自动读取 .env
 const GEMINI_API_KEY = process.env.API_KEY;
-
+// 👇 加上这两行代码，既能测试，又能作为改动触发 GitHub 提交
+console.log("=========================================");
+console.log("当前读取到的 API KEY 前五个字符是:", GEMINI_API_KEY ? GEMINI_API_KEY.substring(0, 5) : "【警告】竟然是空的！undefined！");
+console.log("=========================================");
 const app = express();
 
 // 允许前端读取后端生成的新文件名和新后缀
