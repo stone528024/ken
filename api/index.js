@@ -61,7 +61,11 @@ async function translateBatch(textsArray, targetLang) {
 
         return JSON.parse(resultText);
     } catch (error) {
-        console.error("AI 翻译失败，尝试重试...");
+        if (error.response && error.response.data) {
+            console.error("[-] Gemini API 拒绝了请求，Google 原话是:", JSON.stringify(error.response.data, null, 2));
+        } else {
+            console.error("[-] 请求 Gemini 时发生网络错误:", error.message);
+        }
         throw error;
     }
 }
