@@ -129,14 +129,14 @@
             <div class="flex-1 flex flex-col gap-6">
                 <div id="dropZone"
                     class="drop-zone flex-1 glass-panel rounded-2xl border-2 border-dashed border-gray-600 flex flex-col items-center justify-center relative cursor-pointer group hover:border-cyber-blue/60 overflow-hidden">
-                    <input type="file" id="fileInput" class="hidden" accept=".doc,.docx,.pdf,.txt" />
+                    <input type="file" id="fileInput" class="hidden" accept=".doc,.docx,.txt" />
                     <div id="scanLine" class="scan-line"></div>
 
                     <div id="uploadUI" class="text-center">
                         <i
                             class="fa-solid fa-cloud-arrow-up text-6xl text-gray-500 group-hover:text-cyber-blue transition-colors mb-4"></i>
                         <h3 class="text-xl font-bold mb-2">拖拽文件至此 或 点击上传</h3>
-                        <p class="text-gray-400 text-sm">支持格式: PDF, DOCX, DOC, TXT</p>
+                        <p class="text-gray-400 text-sm">支持格式: DOCX, DOC, TXT，文件不得超过20MB</p>
                     </div>
 
                     <div id="fileInfoUI" class="hidden text-center flex flex-col items-center">
@@ -206,6 +206,30 @@
         dropZone.onclick = (e) => { if (e.target.id !== 'resetBtn') fileInput.click(); };
         fileInput.onchange = (e) => {
             currentFile = e.target.files[0];
+            // 如果没选中文件，直接退出
+            if (!currentFile) return;
+
+            // 计算文件大小（转MB）
+            const fileSizeMB = currentFile.size / 1024 / 1024;
+            // 限制20MB
+            const maxSizeMB = 20;
+
+            // 判断文件是否超过大小限制
+            if (fileSizeMB > maxSizeMB) {
+                // 1. 弹出提示
+                alert(`文件大小超出限制！最大支持 ${maxSizeMB}MB，当前文件：${fileSizeMB.toFixed(2)}MB`);
+                // 2. 清空选中的文件（关键：重置文件上传控件）
+                e.target.value = '';
+                currentFile = null;
+                // 3. 恢复上传UI，隐藏文件信息
+                uploadUI.classList.remove('hidden');
+                fileInfoUI.classList.add('hidden');
+                // 4. 禁用开始按钮
+                startBtn.disabled = true;
+                // 5. 终端日志记录
+                logToTerminal(`错误：文件 ${currentFile?.name || '未命名'} 超过${maxSizeMB}MB限制，已取消上传`);
+                return;
+            }
             document.getElementById('fileName').textContent = currentFile.name;
             document.getElementById('fileSize').textContent = (currentFile.size / 1024 / 1024).toFixed(2) + ' MB';
             uploadUI.classList.add('hidden'); fileInfoUI.classList.remove('hidden');
