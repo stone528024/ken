@@ -49,12 +49,11 @@
             border-color: rgba(0, 243, 255, 0.3);
             text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
         }
-        
+
         .nav-item:not(.active):hover {
             background-color: rgba(255, 255, 255, 0.05);
             border-color: rgba(255, 255, 255, 0.1);
         }
-
     </style>
 </head>
 
@@ -74,11 +73,21 @@
                 <i class="fa-solid fa-language text-lg w-5 text-center"></i>
                 <span class="font-bold">文档翻译</span>
             </a>
-            
+
             <a href="#" onclick="switchTab('image_convert.html', this)"
                 class="nav-item flex items-center gap-3 p-3 rounded-lg border border-transparent text-gray-300">
                 <i class="fa-solid fa-image text-lg w-5 text-center"></i>
                 <span class="font-bold">图片处理</span>
+            </a>
+            <a href="#" onclick="switchTab('price.html', this)"
+                class="nav-item flex items-center gap-3 p-3 rounded-lg border border-transparent text-gray-300">
+                <i class="fa-solid fa-money-bill text-lg w-5 text-center"></i>
+                <span class="font-bold">金额换算</span>
+            </a>
+            <a href="#" onclick="switchTab('gold.html', this)"
+                class="nav-item flex items-center gap-3 p-3 rounded-lg border border-transparent text-gray-300">
+                <i class="fa-solid fa-globe text-lg w-5 text-center"></i>
+                <span class="font-bold">贵金属行情</span>
             </a>
         </nav>
         <div class="p-4 border-t border-cyber-blue/20 text-xs text-gray-500 font-orbitron text-center">
@@ -88,7 +97,8 @@
 
     <!-- 主内容区：使用 iframe 承载不同模块 -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
-        <iframe id="mainFrame" name="mainFrame" src="translate.html" class="w-full h-full border-none" title="Main Content"></iframe>
+        <iframe id="mainFrame" name="mainFrame" src="translate.html" class="w-full h-full border-none"
+            title="Main Content"></iframe>
     </main>
 
     <script>
@@ -99,10 +109,10 @@
             });
             // 为当前点击的元素添加active类
             element.classList.add('active');
-            
+
             // 切换iframe的内容
             document.getElementById('mainFrame').src = url;
-            
+
             // 如果是移动端，可能还需要在这里添加隐藏侧边栏的逻辑
         }
     </script>

@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贵金属实时行情 · MetalX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { orbitron: ['Orbitron'], inter: ['Inter'] } } }
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #08080f;
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: #fff
+        }
+
+        /* ===== BG: 用静态渐变替代 blur(120px) 光晕 ===== */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 600px 500px at 85% 10%, rgba(255, 185, 11, 0.07), transparent),
+                radial-gradient(ellipse 500px 400px at 10% 90%, rgba(140, 140, 200, 0.05), transparent),
+                radial-gradient(ellipse 400px 350px at 50% 50%, rgba(180, 130, 80, 0.03), transparent);
+        }
+
+        /* 简化网格：纯CSS无动画 */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255, 215, 0, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 215, 0, 0.015) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* ===== Canvas ===== */
+        #particles-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            will-change: transform
+        }
+
+        /* ===== Glass: 移除 backdrop-filter，用半透明背景替代 ===== */
+        .glass {
+            background: rgba(14, 14, 28, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 16px
+        }
+
+        .glass-b {
+            background: rgba(14, 14, 28, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 20px
+        }
+
+        /* ===== Title Gradient ===== */
+        .title-grad {
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: tShine 4s ease infinite;
+        }
+
+        @keyframes tShine {
+            0% {
+                background-position: 0% center
+            }
+
+            100% {
+                background-position: 200% center
+            }
+        }
+
+        /* ===== Pulse ===== */
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%
+        }
+
+        .pulse-green {
+            background: #00ffc8;
+            box-shadow: 0 0 6px rgba(0, 255, 200, 0.5)
+        }
+
+        .pulse-red {
+            background: #ff4444;
+            box-shadow: 0 0 6px rgba(255, 68, 68, 0.5)
+        }
+
+        .pulse-yellow {
+            background: #ffc107;
+            box-shadow: 0 0 6px rgba(255, 193, 7, 0.5)
+        }
+
+        /* ===== Ticker ===== */
+        .ticker-wrap {
+            overflow: hidden;
+            position: relative
+        }
+
+        .ticker-wrap::before,
+        .ticker-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50px;
+            z-index: 2;
+            pointer-events: none
+        }
+
+        .ticker-wrap::before {
+            left: 0;
+            background: linear-gradient(90deg, #08080f, transparent)
+        }
+
+        .ticker-wrap::after {
+            right: 0;
+            background: linear-gradient(90deg, transparent, #08080f)
+        }
+
+        .ticker-track {
+            display: flex;
+            width: max-content;
+            animation: tickerScroll 30s linear infinite;
+            will-change: transform
+        }
+
+        .ticker-track:hover {
+            animation-play-state: paused
+        }
+
+        @keyframes tickerScroll {
+            0% {
+                transform: translate3d(0, 0, 0)
+            }
+
+            100% {
+                transform: translate3d(-50%, 0, 0)
+            }
+        }
+
+        /* ===== Hero Gold Border: 简化为单色脉冲 ===== */
+        .hero-border {
+            position: relative;
+            border-radius: 22px
+        }
+
+        .hero-border::before {
+            content: '';
+            position: absolute;
+            inset: -1.5px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+            background-size: 200% 200%;
+            animation: heroBG 6s ease infinite;
+            z-index: -1;
+            opacity: .5
+        }
+
+        @keyframes heroBG {
+
+            0%,
+            100% {
+                background-position: 0% 50%
+            }
+
+            50% {
+                background-position: 100% 50%
+            }
+        }
+
+        /* ===== Metal Cards ===== */
+        .metal-card {
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: transform .3s ease, box-shadow .3s ease;
+            contain: layout style paint;
+        }
+
+        .metal-card:hover {
+            transform: translateY(-4px)
+        }
+
+        .card-gold {
+            background: linear-gradient(160deg, rgba(255, 215, 0, 0.06) 0%, rgba(20, 20, 30, 0.9) 60%);
+            border: 1px solid rgba(255, 215, 0, 0.12)
+        }
+
+        .card-gold:hover {
+            border-color: rgba(255, 215, 0, 0.35);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .25)
+        }
+
+        .card-silver {
+            background: linear-gradient(160deg, rgba(192, 192, 192, 0.06) 0%, rgba(20, 20, 30, 0.9) 60%);
+            border: 1px solid rgba(192, 192, 192, 0.12)
+        }
+
+        .card-silver:hover {
+            border-color: rgba(192, 192, 192, 0.35);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .25)
+        }
+
+        .card-platinum {
+            background: linear-gradient(160deg, rgba(155, 181, 206, 0.06) 0%, rgba(20, 20, 30, 0.9) 60%);
+            border: 1px solid rgba(155, 181, 206, 0.12)
+        }
+
+        .card-platinum:hover {
+            border-color: rgba(155, 181, 206, 0.35);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .25)
+        }
+
+        .card-palladium {
+            background: linear-gradient(160deg, rgba(188, 159, 119, 0.06) 0%, rgba(20, 20, 30, 0.9) 60%);
+            border: 1px solid rgba(188, 159, 119, 0.12)
+        }
+
+        .card-palladium:hover {
+            border-color: rgba(188, 159, 119, 0.35);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .25)
+        }
+
+        /* ===== Input ===== */
+        .calc-input {
+            background: rgba(10, 10, 25, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #FFD700;
+            font-family: 'Orbitron';
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            outline: none;
+            caret-color: #FFD700;
+            transition: border-color .3s
+        }
+
+        .calc-input:focus {
+            border-color: rgba(255, 215, 0, 0.5)
+        }
+
+        .calc-input::placeholder {
+            color: rgba(255, 215, 0, 0.2)
+        }
+
+        .calc-select {
+            appearance: none;
+            background: rgba(10, 10, 25, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            padding: 12px 40px 12px 16px;
+            border-radius: 12px;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: border-color .3s;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23FFD700' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center
+        }
+
+        .calc-select:focus {
+            outline: none;
+            border-color: rgba(255, 215, 0, 0.4)
+        }
+
+        /* ===== Table ===== */
+        .price-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0
+        }
+
+        .price-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: rgba(255, 255, 255, 0.35);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-weight: 500
+        }
+
+        .price-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: .9rem
+        }
+
+        .price-table tr:hover td {
+            background: rgba(255, 215, 0, 0.02)
+        }
+
+        .num {
+            font-family: 'Orbitron';
+            font-weight: 600;
+            letter-spacing: .5px
+        }
+
+        /* ===== Ratio Bar ===== */
+        .ratio-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.06);
+            overflow: hidden
+        }
+
+        .ratio-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .8s ease
+        }
+
+        /* ===== Loading ===== */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 215, 0, 0.12);
+            border-top-color: #FFD700;
+            border-radius: 50%;
+            animation: spin .8s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* ===== Scroll ===== */
+        ::-webkit-scrollbar {
+            width: 5px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.12);
+            border-radius: 3px
+        }
+
+        @media(max-width:640px) {
+            .hero-price {
+                font-size: 2.2rem !important
+            }
+
+            .calc-input {
+                font-size: 1.4rem
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen relative">
+
+    <!-- 静态背景层(无动画，无blur) -->
+    <div class="bg-layer"></div>
+    <div class="grid-bg"></div>
+    <!-- 轻量粒子 -->
+    <canvas id="particles-canvas"></canvas>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 py-6 md:py-10">
+
+        <!-- HEADER -->
+        <header class="text-center mb-8 md:mb-12">
+            <div class="inline-flex items-center gap-3 mb-4">
+                <div
+                    class="w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                    <svg class="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H11.5v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.65c.09 1.72 1.38 2.69 2.85 3v1.67h1.73v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.65-3.42z" />
+                    </svg>
+                </div>
+                <span class="font-orbitron text-sm tracking-[0.3em] text-gray-400 uppercase">MetalX</span>
+            </div>
+            <h1 class="font-orbitron text-3xl md:text-5xl font-bold title-grad mb-3">贵金属实时行情</h1>
+            <p class="text-gray-400 text-sm md:text-base max-w-xl mx-auto">伦敦金 · 伦敦银 · 铂金 · 钯金 · 国际现货价格实时追踪</p>
+            <div class="flex items-center justify-center gap-2 mt-4">
+                <div class="pulse-dot pulse-yellow" id="status-dot"></div>
+                <span class="text-xs text-yellow-400/70 font-medium" id="status-text">正在获取实时行情...</span>
+                <button onclick="fetchAllPrices()"
+                    class="ml-2 text-xs text-gray-500 hover:text-yellow-400 transition-colors" title="刷新">
+                    <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- LOADING -->
+        <div id="loading" class="flex flex-col items-center justify-center py-24">
+            <div class="spinner mb-4"></div>
+            <p class="text-gray-400 text-sm">正在连接国际贵金属行情服务器...</p>
+        </div>
+
+        <!-- MAIN -->
+        <div id="main-content" class="hidden">
+
+            <!-- TICKER -->
+            <div class="glass rounded-xl mb-8 py-3 ticker-wrap">
+                <div class="ticker-track" id="ticker-track"></div>
+            </div>
+
+            <!-- HERO GOLD -->
+            <div class="hero-border mb-8">
+                <div class="glass-b p-6 md:p-10" style="border-radius:20px">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-4xl">🥇</span>
+                                <div>
+                                    <h2 class="font-orbitron text-lg md:text-xl font-bold text-yellow-400">伦敦金 · London
+                                        Gold</h2>
+                                    <span class="text-xs text-gray-500">XAU/USD · 国际现货黄金</span>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="hero-price font-orbitron text-4xl md:text-6xl font-black text-white tracking-wider"
+                                    id="hero-gold-usd">--</div>
+                                <span class="text-gray-400 text-sm">美元 / 盎司 (troy oz)</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-3 md:items-end">
+                            <div class="glass px-5 py-3 text-center md:text-right">
+                                <div class="text-xs text-gray-500 mb-1">人民币 / 克</div>
+                                <div class="font-orbitron text-2xl md:text-3xl font-bold text-yellow-400"
+                                    id="hero-gold-cny-g">--</div>
+                            </div>
+                            <div class="glass px-5 py-3 text-center md:text-right">
+                                <div class="text-xs text-gray-500 mb-1">人民币 / 盎司</div>
+                                <div class="font-orbitron text-lg font-semibold text-gray-300" id="hero-gold-cny-oz">--
+                                </div>
+                            </div>
+                            <div class="glass px-5 py-3 text-center md:text-right">
+                                <div class="text-xs text-gray-500 mb-1">欧元 / 盎司</div>
+                                <div class="font-orbitron text-lg font-semibold text-gray-300" id="hero-gold-eur">--
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 METAL CARDS -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+                <div class="metal-card card-gold" id="card-xau">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">🥇</span>
+                            <div>
+                                <div class="font-semibold text-sm text-yellow-300">黄金</div>
+                                <div class="text-xs text-gray-500">XAU · Gold</div>
+                            </div>
+                        </div>
+                        <span
+                            class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-yellow-400/10 text-yellow-400/70 border border-yellow-400/20">现货</span>
+                    </div>
+                    <div class="font-orbitron text-2xl font-bold text-white mb-1 metal-usd" data-metal="xau">$ --</div>
+                    <div class="text-xs text-gray-400">USD / troy oz</div>
+                    <div class="mt-3 pt-3 border-t border-white/5 flex justify-between">
+                        <div>
+                            <div class="text-[10px] text-gray-500">¥/克</div>
+                            <div class="font-orbitron text-sm font-semibold text-yellow-400 metal-cny-g"
+                                data-metal="xau">--</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-gray-500">¥/盎司</div>
+                            <div class="font-orbitron text-sm font-semibold text-gray-300 metal-cny-oz"
+                                data-metal="xau">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="metal-card card-silver" id="card-xag">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">🥈</span>
+                            <div>
+                                <div class="font-semibold text-sm text-gray-200">白银</div>
+                                <div class="text-xs text-gray-500">XAG · Silver</div>
+                            </div>
+                        </div>
+                        <span
+                            class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-gray-400/10 text-gray-400/70 border border-gray-400/20">伦敦银</span>
+                    </div>
+                    <div class="font-orbitron text-2xl font-bold text-white mb-1 metal-usd" data-metal="xag">$ --</div>
+                    <div class="text-xs text-gray-400">USD / troy oz</div>
+                    <div class="mt-3 pt-3 border-t border-white/5 flex justify-between">
+                        <div>
+                            <div class="text-[10px] text-gray-500">¥/克</div>
+                            <div class="font-orbitron text-sm font-semibold text-gray-200 metal-cny-g" data-metal="xag">
+                                --</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-gray-500">¥/盎司</div>
+                            <div class="font-orbitron text-sm font-semibold text-gray-300 metal-cny-oz"
+                                data-metal="xag">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="metal-card card-platinum" id="card-xpt">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">💎</span>
+                            <div>
+                                <div class="font-semibold text-sm text-blue-200">铂金</div>
+                                <div class="text-xs text-gray-500">XPT · Platinum</div>
+                            </div>
+                        </div>
+                        <span
+                            class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-blue-400/10 text-blue-400/70 border border-blue-400/20">现货</span>
+                    </div>
+                    <div class="font-orbitron text-2xl font-bold text-white mb-1 metal-usd" data-metal="xpt">$ --</div>
+                    <div class="text-xs text-gray-400">USD / troy oz</div>
+                    <div class="mt-3 pt-3 border-t border-white/5 flex justify-between">
+                        <div>
+                            <div class="text-[10px] text-gray-500">¥/克</div>
+                            <div class="font-orbitron text-sm font-semibold text-blue-300 metal-cny-g" data-metal="xpt">
+                                --</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-gray-500">¥/盎司</div>
+                            <div class="font-orbitron text-sm font-semibold text-gray-300 metal-cny-oz"
+                                data-metal="xpt">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="metal-card card-palladium" id="card-xpd">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">✨</span>
+                            <div>
+                                <div class="font-semibold text-sm text-amber-200">钯金</div>
+                                <div class="text-xs text-gray-500">XPD · Palladium</div>
+                            </div>
+                        </div>
+                        <span
+                            class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-amber-400/10 text-amber-400/70 border border-amber-400/20">现货</span>
+                    </div>
+                    <div class="font-orbitron text-2xl font-bold text-white mb-1 metal-usd" data-metal="xpd">$ --</div>
+                    <div class="text-xs text-gray-400">USD / troy oz</div>
+                    <div class="mt-3 pt-3 border-t border-white/5 flex justify-between">
+                        <div>
+                            <div class="text-[10px] text-gray-500">¥/克</div>
+                            <div class="font-orbitron text-sm font-semibold text-amber-300 metal-cny-g"
+                                data-metal="xpd">--</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-gray-500">¥/盎司</div>
+                            <div class="font-orbitron text-sm font-semibold text-gray-300 metal-cny-oz"
+                                data-metal="xpd">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CALCULATOR -->
+            <div class="glass-b p-6 md:p-8 mb-10">
+                <h3 class="font-orbitron text-lg font-bold text-yellow-400 mb-1">💰 贵金属价值计算器</h3>
+                <p class="text-gray-500 text-xs mb-6">输入重量，即时计算您持有的贵金属价值</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <label class="text-xs text-gray-400 mb-2 block">选择金属</label>
+                        <select id="calc-metal" class="calc-select w-full" onchange="calculate()">
+                            <option value="xau">🥇 黄金 Gold</option>
+                            <option value="xag">🥈 白银 Silver</option>
+                            <option value="xpt">💎 铂金 Platinum</option>
+                            <option value="xpd">✨ 钯金 Palladium</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 mb-2 block">输入重量</label>
+                        <input type="text" id="calc-weight" class="calc-input" value="10" placeholder="0"
+                            oninput="calcDebounced()">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 mb-2 block">重量单位</label>
+                        <select id="calc-unit" class="calc-select w-full" onchange="calculate()">
+                            <option value="gram">克 (g)</option>
+                            <option value="oz">盎司 (troy oz)</option>
+                            <option value="kg">千克 (kg)</option>
+                            <option value="tael">两 (50g)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="glass p-5 text-center">
+                        <div class="text-xs text-gray-500 mb-2">价值（人民币）</div>
+                        <div class="font-orbitron text-3xl md:text-4xl font-black text-yellow-400" id="calc-cny">¥ --
+                        </div>
+                    </div>
+                    <div class="glass p-5 text-center">
+                        <div class="text-xs text-gray-500 mb-2">价值（美元）</div>
+                        <div class="font-orbitron text-3xl md:text-4xl font-black text-white" id="calc-usd">$ --</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRICE TABLE -->
+            <div class="glass-b p-6 md:p-8 mb-10 overflow-x-auto">
+                <h3 class="font-orbitron text-lg font-bold text-yellow-400 mb-1">📊 全维度价格表</h3>
+                <p class="text-gray-500 text-xs mb-6">1 金衡盎司 (troy oz) = 31.1035 克</p>
+                <table class="price-table min-w-[700px]">
+                    <thead>
+                        <tr>
+                            <th>金属</th>
+                            <th>美元/盎司</th>
+                            <th>美元/克</th>
+                            <th>人民币/盎司</th>
+                            <th>人民币/克</th>
+                            <th>人民币/千克</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-table-body"></tbody>
+                </table>
+            </div>
+
+            <!-- GOLD INTERNATIONAL -->
+            <div class="glass-b p-6 md:p-8 mb-10 overflow-x-auto">
+                <h3 class="font-orbitron text-lg font-bold text-yellow-400 mb-1">🌍 黄金国际报价</h3>
+                <p class="text-gray-500 text-xs mb-6">1盎司黄金在各国货币下的价格</p>
+                <table class="price-table min-w-[600px]">
+                    <thead>
+                        <tr>
+                            <th>货币</th>
+                            <th>代码</th>
+                            <th>每盎司价格</th>
+                            <th>每克价格</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gold-intl-body"></tbody>
+                </table>
+            </div>
+
+            <!-- RATIOS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                <div class="glass-b p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-orbitron text-sm font-bold text-yellow-400">金银比 Gold/Silver</h4>
+                            <p class="text-[11px] text-gray-500 mt-1">历史均值约 60</p>
+                        </div>
+                        <div class="font-orbitron text-3xl font-black text-white" id="ratio-gs">--</div>
+                    </div>
+                    <div class="ratio-bar">
+                        <div class="ratio-fill bg-gradient-to-r from-yellow-500 to-gray-400" id="ratio-gs-bar"
+                            style="width:0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-600 mt-1">
+                        <span>30</span><span>60</span><span>90</span><span>120</span></div>
+                </div>
+                <div class="glass-b p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-orbitron text-sm font-bold text-yellow-400">金铂比 Gold/Platinum</h4>
+                            <p class="text-[11px] text-gray-500 mt-1">>1 = 金价高于铂金</p>
+                        </div>
+                        <div class="font-orbitron text-3xl font-black text-white" id="ratio-gp">--</div>
+                    </div>
+                    <div class="ratio-bar">
+                        <div class="ratio-fill bg-gradient-to-r from-yellow-500 to-blue-300" id="ratio-gp-bar"
+                            style="width:0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-600 mt-1">
+                        <span>0.5</span><span>1.0</span><span>1.5</span><span>2.0</span></div>
+                </div>
+            </div>
+
+            <!-- KNOWLEDGE -->
+            <div class="glass p-6 md:p-8 mb-10">
+                <h3 class="font-orbitron text-sm font-bold text-yellow-400 mb-4">📖 名词解释</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-400">
+                    <div class="flex gap-3"><span
+                            class="text-yellow-400 font-bold shrink-0">伦敦金</span><span>XAU/USD，全球最主要的黄金现货基准价，以美元/盎司计价。</span>
+                    </div>
+                    <div class="flex gap-3"><span
+                            class="text-gray-300 font-bold shrink-0">伦敦银</span><span>XAG/USD，全球白银现货基准价，以美元/盎司计价。</span>
+                    </div>
+                    <div class="flex gap-3"><span
+                            class="text-blue-300 font-bold shrink-0">铂金</span><span>比黄金更稀有，广泛用于汽车催化剂、珠宝和投资。</span></div>
+                    <div class="flex gap-3"><span
+                            class="text-amber-300 font-bold shrink-0">钯金</span><span>铂族金属之一，主要用于汽车尾气净化催化剂。</span></div>
+                    <div class="flex gap-3"><span class="text-emerald-400 font-bold shrink-0">金衡盎司</span><span>Troy
+                            Ounce = 31.1035 克，贵金属国际通用计量单位。</span></div>
+                    <div class="flex gap-3"><span class="text-pink-400 font-bold shrink-0">金银比</span><span>Gold/Silver
+                            Ratio，历史均值约 60，过高常被视为白银被低估。</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="text-center mt-6 pb-8 relative z-10">
+            <div class="inline-flex items-center gap-2 glass px-5 py-2.5 rounded-full mb-3">
+                <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                <span class="text-xs text-gray-400">价格仅供参考，非交易报价</span>
+            </div>
+            <p class="text-gray-600 text-xs">© 2025 MetalX · 数据来源 Currency API · 每5分钟自动刷新</p>
+        </footer>
+    </div>
+
+    <script>
+        // ===== 常量 =====
+        const TROY = 31.1035;
+        const API = 'https://latest.currency-api.pages.dev/v1/currencies';
+
+        const metalInfo = {
+            xau: { name: '黄金', en: 'Gold', emoji: '🥇' },
+            xag: { name: '白银', en: 'Silver', emoji: '🥈' },
+            xpt: { name: '铂金', en: 'Platinum', emoji: '💎' },
+            xpd: { name: '钯金', en: 'Palladium', emoji: '✨' },
+        };
+
+        const intlCur = [
+            { c: 'usd', n: '美元', f: '🇺🇸', s: '$' }, { c: 'cny', n: '人民币', f: '🇨🇳', s: '¥' },
+            { c: 'eur', n: '欧元', f: '🇪🇺', s: '€' }, { c: 'gbp', n: '英镑', f: '🇬🇧', s: '£' },
+            { c: 'jpy', n: '日元', f: '🇯🇵', s: '¥' }, { c: 'krw', n: '韩元', f: '🇰🇷', s: '₩' },
+            { c: 'hkd', n: '港币', f: '🇭🇰', s: 'HK$' }, { c: 'chf', n: '瑞郎', f: '🇨🇭', s: 'Fr' },
+            { c: 'aud', n: '澳元', f: '🇦🇺', s: 'A$' }, { c: 'sgd', n: '新加坡元', f: '🇸🇬', s: 'S$' },
+            { c: 'inr', n: '印度卢比', f: '🇮🇳', s: '₹' }, { c: 'rub', n: '俄卢布', f: '🇷🇺', s: '₽' },
+        ];
+
+        let prices = {};
+        let dataReady = false;
+
+        // ===== Debounce =====
+        let calcTimer = null;
+        function calcDebounced() {
+            clearTimeout(calcTimer);
+            calcTimer = setTimeout(calculate, 80);
+        }
+
+        // ===== Fetch =====
+        async function fetchAllPrices() {
+            setStatus('loading');
+            const metals = ['xau', 'xag', 'xpt', 'xpd'];
+            try {
+                const results = await Promise.all(
+                    metals.map(m => fetch(`${API}/${m}.json`).then(r => { if (!r.ok) throw 0; return r.json() }))
+                );
+                results.forEach((d, i) => { if (d[metals[i]]) prices[metals[i]] = d[metals[i]]; });
+                if (Object.keys(prices).length >= 4) { dataReady = true; setStatus('ok'); renderAll(); return }
+                throw 0;
+            } catch (e1) {
+                try {
+                    const r = await fetch(`${API}/usd.json`); if (!r.ok) throw 0;
+                    const d = await r.json();
+                    if (d.usd) {
+                        metals.forEach(m => {
+                            if (d.usd[m]) {
+                                const u = 1 / d.usd[m]; prices[m] = { usd: u };
+                                intlCur.forEach(c => { if (c.c !== 'usd' && d.usd[c.c]) prices[m][c.c] = u * d.usd[c.c] });
+                            }
+                        });
+                        if (Object.keys(prices).length >= 4) { dataReady = true; setStatus('ok'); renderAll(); return }
+                    }
+                    throw 0;
+                } catch (e2) { useFallback(); }
+            }
+        }
+
+        function useFallback() {
+            prices = {
+                xau: { usd: 3050, cny: 22100, eur: 2800, gbp: 2420, jpy: 462000, krw: 4150000, hkd: 23800, chf: 2680, aud: 4850, sgd: 4050, inr: 258000, rub: 285000 },
+                xag: { usd: 33.5, cny: 243, eur: 30.8, gbp: 26.5, jpy: 5080, krw: 45600, hkd: 261, chf: 29.4, aud: 53.3, sgd: 44.5, inr: 2830, rub: 3130 },
+                xpt: { usd: 1020, cny: 7400, eur: 937, gbp: 809, jpy: 154600, krw: 1389000, hkd: 7960, chf: 896, aud: 1624, sgd: 1355, inr: 86300, rub: 95400 },
+                xpd: { usd: 980, cny: 7100, eur: 900, gbp: 777, jpy: 148500, krw: 1335000, hkd: 7650, chf: 861, aud: 1560, sgd: 1302, inr: 82900, rub: 91700 }
+            };
+            dataReady = true; setStatus('off'); renderAll();
+        }
+
+        function setStatus(s) {
+            const d = document.getElementById('status-dot'), t = document.getElementById('status-text');
+            if (s === 'loading') { d.className = 'pulse-dot pulse-yellow'; t.textContent = '正在获取实时行情...'; t.className = 'text-xs text-yellow-400/70 font-medium' }
+            else if (s === 'ok') { d.className = 'pulse-dot pulse-green'; t.textContent = `实时数据 · ${fmtT(new Date())} 更新`; t.className = 'text-xs text-emerald-400/70 font-medium' }
+            else { d.className = 'pulse-dot pulse-red'; t.textContent = '离线数据（非实时）'; t.className = 'text-xs text-red-400/70 font-medium' }
+        }
+
+        // ===== Render =====
+        function renderAll() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            renderHero(); renderCards(); renderTicker(); renderTable(); renderGoldIntl(); renderRatios(); calculate();
+        }
+
+        function fmt(n, d = 2) {
+            if (n >= 10000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            if (n >= 100) return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+            if (n >= 1) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+            return n.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+        }
+        function fmtT(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+
+        function renderHero() {
+            const g = prices.xau; if (!g) return;
+            document.getElementById('hero-gold-usd').textContent = '$ ' + fmt(g.usd);
+            document.getElementById('hero-gold-cny-g').textContent = '¥ ' + fmt(g.cny / TROY);
+            document.getElementById('hero-gold-cny-oz').textContent = '¥ ' + fmt(g.cny);
+            document.getElementById('hero-gold-eur').textContent = '€ ' + fmt(g.eur || 0);
+        }
+
+        function renderCards() {
+            ['xau', 'xag', 'xpt', 'xpd'].forEach(m => {
+                const p = prices[m]; if (!p) return;
+                const u = document.querySelector(`.metal-usd[data-metal="${m}"]`);
+                const g = document.querySelector(`.metal-cny-g[data-metal="${m}"]`);
+                const o = document.querySelector(`.metal-cny-oz[data-metal="${m}"]`);
+                if (u) u.textContent = '$ ' + fmt(p.usd);
+                if (g) g.textContent = '¥ ' + fmt(p.cny / TROY);
+                if (o) o.textContent = '¥ ' + fmt(p.cny);
+            });
+        }
+
+        function renderTicker() {
+            const t = document.getElementById('ticker-track');
+            const items = ['xau', 'xag', 'xpt', 'xpd'].map(m => {
+                const i = metalInfo[m], p = prices[m];
+                return `<div class="flex items-center gap-6 px-8 shrink-0"><span class="text-lg">${i.emoji}</span><span class="text-sm font-semibold text-gray-200">${i.name}</span><span class="font-orbitron text-sm text-yellow-400">$${p ? fmt(p.usd) : '--'}<span class="text-gray-500 text-xs">/oz</span></span><span class="font-orbitron text-sm text-gray-300">¥${p ? fmt(p.cny / TROY) : '--'}<span class="text-gray-500 text-xs">/g</span></span></div>`;
+            });
+            t.innerHTML = items.join('') + items.join('');
+        }
+
+        function renderTable() {
+            const b = document.getElementById('price-table-body');
+            b.innerHTML = ['xau', 'xag', 'xpt', 'xpd'].map(m => {
+                const i = metalInfo[m], p = prices[m]; if (!p) return '';
+                return `<tr><td><span class="mr-2">${i.emoji}</span><span class="font-semibold">${i.name}</span> <span class="text-gray-500 text-xs">${i.en}</span></td><td class="num text-yellow-400">$ ${fmt(p.usd)}</td><td class="num text-gray-300">$ ${fmt(p.usd / TROY)}</td><td class="num text-yellow-400">¥ ${fmt(p.cny)}</td><td class="num text-white font-bold">¥ ${fmt(p.cny / TROY)}</td><td class="num text-gray-300">¥ ${fmt(p.cny / TROY * 1000, 0)}</td></tr>`;
+            }).join('');
+        }
+
+        function renderGoldIntl() {
+            const b = document.getElementById('gold-intl-body'), g = prices.xau; if (!g) return;
+            b.innerHTML = intlCur.map(c => {
+                const v = g[c.c]; if (v === undefined) return '';
+                return `<tr><td><span class="mr-2 text-lg">${c.f}</span>${c.n}</td><td class="text-gray-400 font-orbitron text-xs">${c.c.toUpperCase()}</td><td class="num text-yellow-400">${c.s} ${fmt(v)}</td><td class="num text-gray-300">${c.s} ${fmt(v / TROY)}</td></tr>`;
+            }).join('');
+        }
+
+        function renderRatios() {
+            const g = prices.xau, s = prices.xag, p = prices.xpt;
+            if (g && s) { const r = g.usd / s.usd; document.getElementById('ratio-gs').textContent = r.toFixed(1); document.getElementById('ratio-gs-bar').style.width = Math.min(Math.max((r - 30) / 90, 0), 1) * 100 + '%' }
+            if (g && p) { const r = g.usd / p.usd; document.getElementById('ratio-gp').textContent = r.toFixed(2); document.getElementById('ratio-gp-bar').style.width = Math.min(Math.max((r - 0.5) / 1.5, 0), 1) * 100 + '%' }
+        }
+
+        function calculate() {
+            if (!dataReady) return;
+            const m = document.getElementById('calc-metal').value;
+            const w = parseFloat(document.getElementById('calc-weight').value) || 0;
+            const u = document.getElementById('calc-unit').value;
+            const p = prices[m]; if (!p) return;
+            let oz;
+            switch (u) { case 'gram': oz = w / TROY; break; case 'oz': oz = w; break; case 'kg': oz = w * 1000 / TROY; break; case 'tael': oz = w * 50 / TROY; break; default: oz = w / TROY }
+            document.getElementById('calc-cny').textContent = '¥ ' + (oz * p.cny).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('calc-usd').textContent = '$ ' + (oz * p.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // ===== 轻量粒子系统（网格空间索引，跳帧连线） =====
+        function initParticles() {
+            const cvs = document.getElementById('particles-canvas');
+            const ctx = cvs.getContext('2d');
+            let W, H;
+            function resize() { W = cvs.width = window.innerWidth; H = cvs.height = window.innerHeight }
+            resize();
+            window.addEventListener('resize', resize);
+
+            // 大幅减少粒子数量
+            const COUNT = Math.min(35, Math.floor(W * H / 30000));
+            const LINK_DIST = 100;
+            const CELL = LINK_DIST;
+            let particles = [];
+
+            for (let i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W, y: Math.random() * H,
+                    vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25,
+                    r: Math.random() * 1.2 + 0.3,
+                    o: Math.random() * 0.3 + 0.08,
+                    c: Math.random() > 0.5 ? '255,215,0' : '180,170,150'
+                });
+            }
+
+            let frame = 0;
+
+            function animate() {
+                ctx.clearRect(0, 0, W, H);
+
+                // 更新位置 & 绘制点
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0 || p.x > W) p.vx *= -1;
+                    if (p.y < 0 || p.y > H) p.vy *= -1;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, 6.283);
+                    ctx.fillStyle = `rgba(${p.c},${p.o})`;
+                    ctx.fill();
+                }
+
+                // 每3帧才算一次连线（最大优化）
+                if (frame % 3 === 0) {
+                    ctx.lineWidth = 0.3;
+                    for (let i = 0; i < particles.length; i++) {
+                        for (let j = i + 1; j < particles.length; j++) {
+                            const dx = particles[i].x - particles[j].x;
+                            if (dx > LINK_DIST || dx < -LINK_DIST) continue;
+                            const dy = particles[i].y - particles[j].y;
+                            if (dy > LINK_DIST || dy < -LINK_DIST) continue;
+                            const d = dx * dx + dy * dy;
+                            if (d < LINK_DIST * LINK_DIST) {
+                                const alpha = 0.04 * (1 - Math.sqrt(d) / LINK_DIST);
+                                ctx.beginPath();
+                                ctx.moveTo(particles[i].x, particles[i].y);
+                                ctx.lineTo(particles[j].x, particles[j].y);
+                                ctx.strokeStyle = `rgba(255,215,0,${alpha})`;
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+                frame++;
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // ===== 启动 =====
+        document.addEventListener('DOMContentLoaded', () => {
+            initParticles();
+            fetchAllPrices();
+            setInterval(fetchAllPrices, 5 * 60 * 1000);
+        });
+    </script>
+</body>
+
+</html>
