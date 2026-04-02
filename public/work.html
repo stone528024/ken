@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐂 牛马搬砖 · CyberWork</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <script>tailwind.config = { theme: { extend: { fontFamily: { orbitron: ['Orbitron'], inter: ['Inter'], mono: ['JetBrains Mono'] } } } }</script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #06060e;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden
+        }
+
+        /* ===== 背景：赛博渐变 ===== */
+        .cyber-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 700px 500px at 15% 15%, rgba(0, 255, 136, 0.04), transparent),
+                radial-gradient(ellipse 600px 500px at 85% 85%, rgba(139, 92, 246, 0.04), transparent),
+                radial-gradient(ellipse 400px 300px at 50% 40%, rgba(59, 130, 246, 0.03), transparent)
+        }
+
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: .3;
+            background-image: linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px
+        }
+
+        /* 顶部扫描线(轻量) */
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            z-index: 1;
+            pointer-events: none;
+            background: linear-gradient(90deg, transparent 20%, rgba(0, 255, 136, 0.5) 50%, transparent 80%);
+            animation: scan 6s linear infinite;
+            opacity: .4
+        }
+
+        @keyframes scan {
+            0% {
+                top: -2px
+            }
+
+            100% {
+                top: 100vh
+            }
+        }
+
+        /* ===== 玻璃(无 backdrop-filter) ===== */
+        .glass {
+            background: rgba(12, 12, 28, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px
+        }
+
+        .glass-b {
+            background: rgba(12, 12, 28, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px
+        }
+
+        /* ===== 霓虹发光卡片(边框流光) ===== */
+        .neon-card {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden
+        }
+
+        .neon-card::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 22px;
+            background: conic-gradient(from var(--angle, 0deg), #00ff88, #3b82f6, #8b5cf6, #f59e0b, #00ff88);
+            animation: neonRotate 4s linear infinite;
+            opacity: .6;
+            z-index: -1
+        }
+
+        .neon-card::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border-radius: 18px;
+            background: #0a0a1a;
+            z-index: -1
+        }
+
+        @keyframes neonRotate {
+            0% {
+                --angle: 0deg;
+                filter: hue-rotate(0deg)
+            }
+
+            100% {
+                --angle: 360deg;
+                filter: hue-rotate(360deg)
+            }
+        }
+
+        /* fallback for browsers without @property */
+        @property --angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false
+        }
+
+        /* ===== 大金额显示 ===== */
+        .money-display {
+            font-family: 'Orbitron';
+            font-weight: 900;
+            letter-spacing: 3px;
+            line-height: 1;
+            background: linear-gradient(180deg, #00ff88 0%, #00cc6a 50%, #009950 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 30px rgba(0, 255, 136, 0.3)) drop-shadow(0 0 60px rgba(0, 255, 136, 0.1))
+        }
+
+        .money-zero {
+            background: linear-gradient(180deg, #333 0%, #222 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: none
+        }
+
+        .money-done {
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.3))
+        }
+
+        /* ===== 圆环进度 ===== */
+        .ring-container {
+            position: relative;
+            width: 200px;
+            height: 200px
+        }
+
+        .ring-svg {
+            transform: rotate(-90deg)
+        }
+
+        .ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.04);
+            stroke-width: 8
+        }
+
+        .ring-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset .3s linear;
+            filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.5))
+        }
+
+        .ring-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center
+        }
+
+        /* ===== 翻牌倒计时 ===== */
+        .flip-group {
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .flip-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center
+        }
+
+        .flip-card {
+            position: relative;
+            width: 52px;
+            height: 62px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(20, 20, 40, 0.95) 0%, rgba(15, 15, 30, 0.95) 49.9%, rgba(12, 12, 25, 0.95) 50%, rgba(18, 18, 35, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4)
+        }
+
+        .flip-card::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            top: 50%;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.4)
+        }
+
+        .flip-num {
+            font-family: 'Orbitron';
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px
+        }
+
+        .flip-label {
+            font-size: .6rem;
+            color: rgba(255, 255, 255, 0.25);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px
+        }
+
+        .flip-sep {
+            font-family: 'Orbitron';
+            font-size: 1.5rem;
+            color: rgba(0, 255, 136, 0.5);
+            margin: 0 2px;
+            animation: blink 1s step-end infinite
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .2
+            }
+        }
+
+        /* ===== 段位系统 ===== */
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            border-radius: 24px;
+            font-size: .8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            font-family: 'Orbitron'
+        }
+
+        .rank-bronze {
+            background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
+            border: 1px solid rgba(205, 127, 50, 0.3);
+            color: #cd7f32
+        }
+
+        .rank-silver {
+            background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
+            border: 1px solid rgba(192, 192, 192, 0.3);
+            color: #c0c0c0
+        }
+
+        .rank-gold {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            color: #ffd700
+        }
+
+        .rank-platinum {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(0, 255, 136, 0.05));
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88
+        }
+
+        .rank-diamond {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #a78bfa;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.1)
+        }
+
+        /* ===== 状态芯片 ===== */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: .78rem;
+            font-weight: 600
+        }
+
+        .chip-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%
+        }
+
+        .chip-work {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            color: #60a5fa
+        }
+
+        .chip-work .chip-dot {
+            background: #3b82f6;
+            box-shadow: 0 0 6px rgba(59, 130, 246, 0.6)
+        }
+
+        .chip-before {
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            color: #fbbf24
+        }
+
+        .chip-before .chip-dot {
+            background: #fbbf24;
+            box-shadow: 0 0 6px rgba(251, 191, 36, 0.6)
+        }
+
+        .chip-after {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #34d399
+        }
+
+        .chip-after .chip-dot {
+            background: #10b981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6)
+        }
+
+        .chip-off {
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            color: #c084fc
+        }
+
+        .chip-off .chip-dot {
+            background: #a855f7;
+            box-shadow: 0 0 6px rgba(168, 85, 247, 0.6)
+        }
+
+        .chip-holiday {
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            color: #fb923c
+        }
+
+        .chip-holiday .chip-dot {
+            background: #f97316;
+            box-shadow: 0 0 6px rgba(249, 115, 22, 0.6)
+        }
+
+        /* ===== 统计卡片 ===== */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            transition: border-color .3s, transform .3s
+        }
+
+        .stat-card:hover {
+            border-color: rgba(0, 255, 136, 0.2);
+            transform: translateY(-3px)
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px
+        }
+
+        .stat-val {
+            font-family: 'Orbitron';
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin-bottom: 2px
+        }
+
+        .stat-label {
+            font-size: .7rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: .5px
+        }
+
+        /* ===== 信息行 ===== */
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background .3s
+        }
+
+        .info-row:last-child {
+            border-bottom: none
+        }
+
+        .info-row:hover {
+            background: rgba(255, 255, 255, 0.02)
+        }
+
+        /* ===== 按钮 ===== */
+        .btn-neon {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: #000;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+            transition: all .3s
+        }
+
+        .btn-neon:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.35);
+            transform: translateY(-2px)
+        }
+
+        .btn-neon::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg) translateY(-100%);
+            transition: transform .6s
+        }
+
+        .btn-neon:hover::after {
+            transform: rotate(45deg) translateY(100%)
+        }
+
+        /* ===== 表单 ===== */
+        .form-input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: .95rem;
+            width: 100%;
+            outline: none;
+            transition: border-color .3s, box-shadow .3s
+        }
+
+        .form-input:focus {
+            border-color: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.08)
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.2)
+        }
+
+        select.form-input {
+            appearance: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300ff88' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px
+        }
+
+        .sch-btn {
+            padding: 12px;
+            border-radius: 12px;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .3s;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #888;
+            text-align: center
+        }
+
+        .sch-btn.active {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: rgba(0, 255, 136, 0.4);
+            color: #00ff88;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.08)
+        }
+
+        .sch-btn:hover:not(.active) {
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #bbb
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px
+        }
+
+        .modal-box {
+            background: #0c0c1e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px
+        }
+
+        /* ===== 语录条 ===== */
+        .quote-bar {
+            background: rgba(0, 255, 136, 0.04);
+            border: 1px solid rgba(0, 255, 136, 0.08);
+            border-radius: 12px;
+            padding: 10px 18px;
+            font-size: .85rem;
+            color: rgba(0, 255, 136, 0.6);
+            text-align: center
+        }
+
+        /* ===== 打工人表情动画 ===== */
+        .worker-emoji {
+            font-size: 4rem;
+            animation: workerBounce 2s ease-in-out infinite
+        }
+
+        @keyframes workerBounce {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-8px)
+            }
+        }
+
+        .worker-emoji-idle {
+            animation: workerIdle 3s ease-in-out infinite
+        }
+
+        @keyframes workerIdle {
+
+            0%,
+            100% {
+                transform: rotate(0deg)
+            }
+
+            25% {
+                transform: rotate(5deg)
+            }
+
+            75% {
+                transform: rotate(-5deg)
+            }
+        }
+
+        /* ===== 收入粒子特效(CSS only) ===== */
+        .sparkle {
+            position: absolute;
+            pointer-events: none
+        }
+
+        .sparkle i {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: sparkleUp 1s ease-out forwards;
+            opacity: 0
+        }
+
+        @keyframes sparkleUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1)
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-40px) scale(0)
+            }
+        }
+
+        /* ===== 每秒赚了多少的弹出 ===== */
+        .per-sec-pop {
+            position: absolute;
+            font-family: 'Orbitron';
+            font-size: .7rem;
+            color: #00ff88;
+            opacity: 0;
+            pointer-events: none;
+            animation: popUp 2s ease-out forwards
+        }
+
+        @keyframes popUp {
+            0% {
+                opacity: .8;
+                transform: translateY(0)
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-30px)
+            }
+        }
+
+        /* ===== 滚动条 ===== */
+        ::-webkit-scrollbar {
+            width: 4px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 136, 0.15);
+            border-radius: 2px
+        }
+
+        /* ===== Animation ===== */
+        .fade-in {
+            animation: fadeIn .5s ease both
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @media(max-width:640px) {
+            .money-display {
+                font-size: 2.6rem !important
+            }
+
+            .flip-card {
+                width: 40px;
+                height: 50px;
+                border-radius: 8px
+            }
+
+            .flip-num {
+                font-size: 1.2rem
+            }
+
+            .ring-container {
+                width: 160px;
+                height: 160px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cyber-bg"></div>
+    <div class="grid-bg"></div>
+    <div class="scanline"></div>
+
+    <!-- ==================== 设置页 ==================== -->
+    <div id="setup-screen" class="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
+        <div class="max-w-lg w-full fade-in">
+            <div class="text-center mb-8">
+                <div class="worker-emoji-idle inline-block">🐂</div>
+                <h1 class="font-orbitron text-2xl md:text-3xl font-bold mt-3 mb-2">
+                    <span
+                        class="bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent">CYBER
+                        WORK</span>
+                </h1>
+                <p class="text-gray-500 text-sm">初始化你的搬砖参数</p>
+            </div>
+
+            <div class="glass-b p-6 md:p-8">
+                <div class="mb-5">
+                    <label class="text-xs text-gray-400 mb-2 block font-mono tracking-wider">💰 MONTHLY SALARY</label>
+                    <input type="number" id="salary" class="form-input text-lg font-orbitron" placeholder="输入月薪"
+                        inputmode="numeric">
+                </div>
+                <div class="mb-5">
+                    <label class="text-xs text-gray-400 mb-2 block font-mono tracking-wider">📅 REST SCHEDULE</label>
+                    <div class="grid grid-cols-3 gap-2" id="schedule-btns">
+                        <button class="sch-btn" onclick="pickSchedule('single')">单休</button>
+                        <button class="sch-btn" onclick="pickSchedule('double')">双休</button>
+                        <button class="sch-btn" onclick="pickSchedule('alternating')">大小周</button>
+                    </div>
+                </div>
+                <div class="mb-5 hidden" id="week-type-section">
+                    <label class="text-xs text-gray-400 mb-2 block font-mono tracking-wider">📌 THIS WEEK</label>
+                    <div class="grid grid-cols-2 gap-2" id="week-type-btns">
+                        <button class="sch-btn" onclick="pickWeekType('big')">大周（周六上班）</button>
+                        <button class="sch-btn" onclick="pickWeekType('small')">小周（周六休息）</button>
+                    </div>
+                </div>
+                <div class="mb-5">
+                    <label class="text-xs text-gray-400 mb-2 block font-mono tracking-wider">🗓️ PAY DAY</label>
+                    <select id="pay-day" class="form-input"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div>
+                        <label class="text-xs text-gray-400 mb-2 block font-mono tracking-wider">🌅 CLOCK IN</label>
+                        <input type="time" id="work-start" class="form-input font-orbitron" value="09:00">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 mb-2 block font-mono tracking-wider">🌙 CLOCK OUT</label>
+                        <input type="time" id="work-end" class="form-input font-orbitron" value="18:00">
+                    </div>
+                </div>
+                <button class="btn-neon w-full" onclick="submitSetup()">⚡ 启动搬砖系统</button>
+            </div>
+            <p class="text-center text-gray-700 text-xs mt-4">所有数据仅存本地浏览器 · 绝不上传</p>
+        </div>
+    </div>
+
+    <!-- ==================== 仪表盘 ==================== -->
+    <div id="dashboard" class="hidden relative z-10 max-w-4xl mx-auto px-4 py-6 md:py-10">
+
+        <!-- 顶部栏 -->
+        <div class="flex items-center justify-between mb-6 fade-in">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-lg shadow-lg shadow-emerald-500/20">
+                    🐂</div>
+                <div>
+                    <div class="font-orbitron text-xs text-gray-400 tracking-widest">CYBER WORK</div>
+                    <div id="chip-wrap"><span class="chip chip-before"><span class="chip-dot"></span>LOADING</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div id="rank-wrap"></div>
+                <button onclick="openSettings()"
+                    class="w-9 h-9 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center hover:border-white/15 transition-all"
+                    title="设置">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero: 圆环 + 金额 -->
+        <div class="neon-card mb-6 fade-in" style="animation-delay:.05s">
+            <div class="p-6 md:p-8" style="background:rgba(10,10,26,0.95);border-radius:18px">
+                <div class="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+                    <!-- 左：圆环进度 -->
+                    <div class="ring-container shrink-0">
+                        <svg class="ring-svg w-full h-full" viewBox="0 0 200 200">
+                            <circle class="ring-bg" cx="100" cy="100" r="88" />
+                            <circle class="ring-progress" cx="100" cy="100" r="88" id="ring-fill" stroke="#00ff88"
+                                stroke-dasharray="553" stroke-dashoffset="553" />
+                        </svg>
+                        <div class="ring-center">
+                            <div class="worker-emoji text-4xl" id="worker-emoji">🧱</div>
+                            <div class="font-orbitron text-xs text-gray-400 mt-1" id="ring-pct">0%</div>
+                        </div>
+                    </div>
+
+                    <!-- 右：金额 + 倒计时 -->
+                    <div class="flex-1 text-center md:text-left w-full">
+                        <div class="text-xs text-gray-400 mb-2 font-mono tracking-wider" id="salary-label">💰 EARNED
+                            TODAY</div>
+                        <div class="relative inline-block">
+                            <div class="money-display text-5xl md:text-7xl mb-2" id="salary-counter">¥ 0.0000</div>
+                            <div class="sparkle" id="sparkle-container"></div>
+                        </div>
+
+                        <!-- 翻牌倒计时 -->
+                        <div class="mt-4">
+                            <div class="text-xs text-gray-500 mb-2" id="cd-label">⏰ 距离下班</div>
+                            <div class="flip-group justify-center md:justify-start">
+                                <div class="flip-unit">
+                                    <div class="flip-card"><span class="flip-num" id="cd-h">00</span></div><span
+                                        class="flip-label">时</span>
+                                </div>
+                                <span class="flip-sep">:</span>
+                                <div class="flip-unit">
+                                    <div class="flip-card"><span class="flip-num" id="cd-m">00</span></div><span
+                                        class="flip-label">分</span>
+                                </div>
+                                <span class="flip-sep">:</span>
+                                <div class="flip-unit">
+                                    <div class="flip-card"><span class="flip-num" id="cd-s">00</span></div><span
+                                        class="flip-label">秒</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 语录条 -->
+                <div class="quote-bar mt-5" id="quote-bar">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 4格 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5 fade-in" style="animation-delay:.1s">
+            <div class="stat-card">
+                <div class="stat-icon">💳</div>
+                <div class="stat-val text-yellow-400" id="payday-val">--</div>
+                <div class="stat-label">距发薪日</div>
+                <div class="text-[10px] text-gray-600 mt-1" id="payday-sub">每月--号</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎉</div>
+                <div class="stat-val text-purple-400" id="friday-val">--</div>
+                <div class="stat-label">距周五</div>
+                <div class="text-[10px] text-gray-600 mt-1" id="friday-sub"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏖️</div>
+                <div class="stat-val text-orange-400" id="holiday-val">--</div>
+                <div class="stat-label" id="holiday-label">距节假日</div>
+                <div class="text-[10px] text-gray-600 mt-1" id="holiday-name">加载中</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧮</div>
+                <div class="stat-val text-emerald-400" id="month-earned">--</div>
+                <div class="stat-label">本月已赚(估)</div>
+                <div class="text-[10px] text-gray-600 mt-1" id="month-earned-sub"></div>
+            </div>
+        </div>
+
+        <!-- 详细数据面板 -->
+        <div class="glass p-0 mb-5 fade-in overflow-hidden" style="animation-delay:.15s">
+            <div class="px-5 py-3 border-b border-white/5">
+                <span class="font-mono text-xs text-gray-400 tracking-widest">📊 SALARY BREAKDOWN</span>
+            </div>
+            <div class="info-row">
+                <div class="flex items-center gap-2"><span class="text-sm">📅</span><span
+                        class="text-sm text-gray-300">日薪</span></div>
+                <span class="font-orbitron text-sm font-bold text-emerald-400" id="daily-salary">--</span>
+            </div>
+            <div class="info-row">
+                <div class="flex items-center gap-2"><span class="text-sm">⏰</span><span
+                        class="text-sm text-gray-300">时薪</span></div>
+                <span class="font-orbitron text-sm font-bold text-emerald-400" id="hourly-salary">--</span>
+            </div>
+            <div class="info-row">
+                <div class="flex items-center gap-2"><span class="text-sm">⚡</span><span
+                        class="text-sm text-gray-300">分钟薪</span></div>
+                <span class="font-orbitron text-sm font-bold text-emerald-400" id="minute-salary">--</span>
+            </div>
+            <div class="info-row">
+                <div class="flex items-center gap-2"><span class="text-sm">💎</span><span
+                        class="text-sm text-gray-300">秒薪</span></div>
+                <span class="font-orbitron text-sm font-bold text-cyan-400" id="second-salary">--</span>
+            </div>
+            <div class="info-row">
+                <div class="flex items-center gap-2"><span class="text-sm">🗓️</span><span
+                        class="text-sm text-gray-300">月工作日</span></div>
+                <span class="font-orbitron text-sm font-bold text-gray-300" id="work-days-month">--</span>
+            </div>
+            <div class="info-row">
+                <div class="flex items-center gap-2"><span class="text-sm">🏢</span><span
+                        class="text-sm text-gray-300">工作时间</span></div>
+                <span class="font-mono text-sm text-gray-300" id="work-time-range">--</span>
+            </div>
+        </div>
+
+        <!-- 摸鱼指数 & 今日进度 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 fade-in" style="animation-delay:.2s">
+            <div class="glass p-5">
+                <div class="text-xs text-gray-400 font-mono tracking-wider mb-3">🐟 MOYU INDEX</div>
+                <div class="flex items-end gap-3">
+                    <div class="font-orbitron text-4xl font-black" id="moyu-score" style="color:#00ff88">--</div>
+                    <div class="text-sm text-gray-500 pb-1" id="moyu-desc">计算中...</div>
+                </div>
+                <div class="mt-3 h-2 rounded bg-white/5 overflow-hidden">
+                    <div class="h-full rounded transition-all duration-500" id="moyu-bar"
+                        style="width:0%;background:linear-gradient(90deg,#00ff88,#3b82f6,#8b5cf6)"></div>
+                </div>
+            </div>
+            <div class="glass p-5">
+                <div class="text-xs text-gray-400 font-mono tracking-wider mb-3">📈 TODAY'S TIMELINE</div>
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-gray-500" id="timeline-start">09:00</span>
+                    <div class="flex-1 h-5 rounded-full bg-white/5 overflow-hidden relative">
+                        <div class="h-full rounded-full transition-all duration-300 relative" id="timeline-fill"
+                            style="width:0%;background:linear-gradient(90deg,#00ff88,#3b82f6)">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg shadow-emerald-400/50"
+                                id="timeline-dot"></div>
+                        </div>
+                    </div>
+                    <span class="text-gray-500" id="timeline-end">18:00</span>
+                </div>
+                <div class="flex justify-between mt-2 text-[10px] text-gray-600">
+                    <span>已工作 <span class="text-emerald-400 font-mono" id="worked-hours">0h</span></span>
+                    <span>剩余 <span class="text-blue-400 font-mono" id="remain-hours">0h</span></span>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-center text-gray-700 text-xs mt-8 mb-6">数据仅存本地 · 节假日来源 timor.tech · <button onclick="resetAll()"
+                class="text-red-400/50 hover:text-red-400 transition-colors underline">重置</button></p>
+    </div>
+
+    <!-- ==================== 设置弹窗 ==================== -->
+    <div id="settings-modal" class="hidden">
+        <div class="modal-overlay" onclick="closeSettingsOuter(event)">
+            <div class="modal-box fade-in">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="font-orbitron text-sm font-bold text-emerald-400 tracking-wider">⚙️ SETTINGS</h2>
+                    <button onclick="closeSettings()"
+                        class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition text-gray-400">✕</button>
+                </div>
+                <div class="mb-4"><label class="text-xs text-gray-400 mb-2 block">💰 月薪</label><input type="number"
+                        id="s-salary" class="form-input font-orbitron" inputmode="numeric"></div>
+                <div class="mb-4"><label class="text-xs text-gray-400 mb-2 block">📅 休息制度</label>
+                    <div class="grid grid-cols-3 gap-2" id="s-schedule-btns">
+                        <button class="sch-btn" onclick="pickScheduleS('single')">单休</button>
+                        <button class="sch-btn" onclick="pickScheduleS('double')">双休</button>
+                        <button class="sch-btn" onclick="pickScheduleS('alternating')">大小周</button>
+                    </div>
+                </div>
+                <div class="mb-4 hidden" id="s-week-type-section"><label class="text-xs text-gray-400 mb-2 block">📌
+                        本周</label>
+                    <div class="grid grid-cols-2 gap-2" id="s-week-type-btns">
+                        <button class="sch-btn" onclick="pickWeekTypeS('big')">大周</button>
+                        <button class="sch-btn" onclick="pickWeekTypeS('small')">小周</button>
+                    </div>
+                </div>
+                <div class="mb-4"><label class="text-xs text-gray-400 mb-2 block">🗓️ 发薪日</label><select id="s-pay-day"
+                        class="form-input"></select></div>
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <div><label class="text-xs text-gray-400 mb-2 block">🌅 上班</label><input type="time"
+                            id="s-work-start" class="form-input font-orbitron"></div>
+                    <div><label class="text-xs text-gray-400 mb-2 block">🌙 下班</label><input type="time" id="s-work-end"
+                            class="form-input font-orbitron"></div>
+                </div>
+                <button class="btn-neon w-full" onclick="saveSettings()">💾 保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const KEY = 'niuma-v2';
+        const WD = { single: 26, double: 21.75, alternating: 23.83 };
+        let cfg = null, holidays = [], timer = null;
+        let setupSch = null, setupWT = null, setSch = null, setWT = null;
+        let lastQuoteT = 0, sparkleId = 0;
+
+        const QUOTES = {
+            before: ['还没上班，再躺5分钟 🛏️', '打工前最后的宁静 ✨', '这是属于自己的时间 😌', '上班倒计时...珍惜自由 🕊️'],
+            early: ['新的一天，启动搬砖 🧱', '早安，打工人 ☕', '今日目标：活着下班 💪', '开机中... Loading... 🤖'],
+            mid_am: ['上午过半了，稳住 ☕', '已进入自动摸鱼模式 🐟', '认真工作（的样子）👀', '假装很忙.exe 已启动 💻'],
+            lunch: ['快到中午了，想吃啥？🍜', '肚子在发出抗议 🍱', '午饭倒计时开始 🍛', '上午的砖搬完了 💪'],
+            afternoon: ['午后犯困是生理反应 😪', '咖啡续命中 ☕', '下午好，继续搬砖 🧱', '困到原地升天 😴'],
+            mid_pm: ['下午过半了，胜利在望 🌅', '还有一点点就自由了 💪', '摸鱼高峰时段 🐟', '距离自由越来越近 🎯'],
+            almost: ['马上下班！冲！🏃‍♂️', '准备跑路倒计时 👟', '自由在呼唤你 🙌', '最后的坚持！🔥'],
+            after: ['下班！今天辛苦了 🎉', '自由了！做自己 🚀', '搬砖结束，开始生活 ✨', '今天的牛马任务完成 🐂'],
+            dayoff: ['今天不上班！快乐！🎊', '休息日属于自己 🎮', '躺平才是真理 🛋️', '不搬砖的一天 ☀️'],
+            holiday: ['放假万岁！🎉', '假期模式已开启 🏖️', '节日快乐！🌴', '这才叫生活 ☀️']
+        };
+
+        const RANKS = [
+            { min: 0, name: '实习牛马', icon: '🐣', cls: 'rank-bronze' },
+            { min: 3000, name: '初级搬砖', icon: '🧱', cls: 'rank-bronze' },
+            { min: 6000, name: '中级打工', icon: '⚒️', cls: 'rank-silver' },
+            { min: 10000, name: '高级社畜', icon: '🏗️', cls: 'rank-silver' },
+            { min: 15000, name: '资深牛马', icon: '🐂', cls: 'rank-gold' },
+            { min: 25000, name: '搬砖大师', icon: '👷', cls: 'rank-gold' },
+            { min: 40000, name: '卷王之王', icon: '💎', cls: 'rank-platinum' },
+            { min: 60000, name: '打工传说', icon: '👑', cls: 'rank-diamond' },
+        ];
+
+        const FALLBACK_H = [
+            { date: '2025-01-01', name: '元旦' }, { date: '2025-01-28', name: '春节' }, { date: '2025-01-29', name: '春节' },
+            { date: '2025-01-30', name: '春节' }, { date: '2025-01-31', name: '春节' }, { date: '2025-02-01', name: '春节' },
+            { date: '2025-02-02', name: '春节' }, { date: '2025-02-03', name: '春节' }, { date: '2025-02-04', name: '春节' },
+            { date: '2025-04-04', name: '清明节' }, { date: '2025-04-05', name: '清明节' }, { date: '2025-04-06', name: '清明节' },
+            { date: '2025-05-01', name: '劳动节' }, { date: '2025-05-02', name: '劳动节' }, { date: '2025-05-03', name: '劳动节' },
+            { date: '2025-05-04', name: '劳动节' }, { date: '2025-05-05', name: '劳动节' },
+            { date: '2025-05-31', name: '端午节' }, { date: '2025-06-01', name: '端午节' }, { date: '2025-06-02', name: '端午节' },
+            { date: '2025-10-01', name: '国庆节' }, { date: '2025-10-02', name: '国庆节' }, { date: '2025-10-03', name: '国庆节' },
+            { date: '2025-10-04', name: '国庆节' }, { date: '2025-10-05', name: '国庆节' }, { date: '2025-10-06', name: '中秋节' },
+            { date: '2025-10-07', name: '国庆节' }, { date: '2025-10-08', name: '国庆节' },
+            { date: '2026-01-01', name: '元旦' }, { date: '2026-02-17', name: '春节' },
+        ];
+
+        // ===== Init =====
+        function init() {
+            initPayDaySelect('pay-day');
+            initPayDaySelect('s-pay-day');
+            cfg = loadCfg();
+            if (cfg) { showDash(); startApp() } else showSetup();
+        }
+        function initPayDaySelect(id) { const s = document.getElementById(id); for (let i = 1; i <= 31; i++) { const o = document.createElement('option'); o.value = i; o.textContent = `每月 ${i} 号`; if (i === 15) o.selected = true; s.appendChild(o) } }
+        function loadCfg() { try { return JSON.parse(localStorage.getItem(KEY)) } catch { return null } }
+        function saveCfg(d) { localStorage.setItem(KEY, JSON.stringify(d)); cfg = d }
+        function showSetup() { document.getElementById('setup-screen').classList.remove('hidden'); document.getElementById('dashboard').classList.add('hidden') }
+        function showDash() { document.getElementById('setup-screen').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden') }
+
+        // ===== Setup =====
+        function pickSchedule(v) { setupSch = v; document.querySelectorAll('#schedule-btns .sch-btn').forEach((b, i) => b.classList.toggle('active', [0, 1, 2][i] === ['single', 'double', 'alternating'].indexOf(v))); document.getElementById('week-type-section').classList.toggle('hidden', v !== 'alternating') }
+        function pickWeekType(v) { setupWT = v; document.querySelectorAll('#week-type-btns .sch-btn').forEach((b, i) => b.classList.toggle('active', i === (v === 'big' ? 0 : 1))) }
+
+        function submitSetup() {
+            const sal = parseFloat(document.getElementById('salary').value);
+            if (!sal || sal <= 0) return alert('请输入有效月薪');
+            if (!setupSch) return alert('请选择休息制度');
+            if (setupSch === 'alternating' && !setupWT) return alert('请选择本周大小周');
+            const ws = document.getElementById('work-start').value, we = document.getElementById('work-end').value;
+            if (!ws || !we) return alert('请填写上下班时间');
+            saveCfg({
+                salary: sal, schedule: setupSch, weekType: setupSch === 'alternating' ? setupWT : null,
+                setupDate: new Date().toISOString(), setupWeekMon: getMondayStr(new Date()),
+                payDay: parseInt(document.getElementById('pay-day').value), workStart: ws, workEnd: we
+            });
+            showDash(); startApp();
+        }
+
+        // ===== Settings =====
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('s-salary').value = cfg.salary;
+            document.getElementById('s-work-start').value = cfg.workStart;
+            document.getElementById('s-work-end').value = cfg.workEnd;
+            document.getElementById('s-pay-day').value = cfg.payDay;
+            setSch = cfg.schedule; setWT = cfg.weekType; refreshSetBtns();
+        }
+        function closeSettings() { document.getElementById('settings-modal').classList.add('hidden') }
+        function closeSettingsOuter(e) { if (e.target === e.currentTarget) closeSettings() }
+        function pickScheduleS(v) { setSch = v; refreshSetBtns() }
+        function pickWeekTypeS(v) { setWT = v; refreshSetBtns() }
+        function refreshSetBtns() {
+            document.querySelectorAll('#s-schedule-btns .sch-btn').forEach((b, i) => b.classList.toggle('active', i === ['single', 'double', 'alternating'].indexOf(setSch)));
+            document.getElementById('s-week-type-section').classList.toggle('hidden', setSch !== 'alternating');
+            document.querySelectorAll('#s-week-type-btns .sch-btn').forEach((b, i) => b.classList.toggle('active', i === (setWT === 'big' ? 0 : 1)));
+        }
+        function saveSettings() {
+            const sal = parseFloat(document.getElementById('s-salary').value);
+            if (!sal || sal <= 0) return alert('有效月薪'); if (!setSch) return alert('选择休息制度');
+            if (setSch === 'alternating' && !setWT) return alert('选大小周');
+            saveCfg({
+                ...cfg, salary: sal, schedule: setSch, weekType: setWT,
+                setupDate: setSch === 'alternating' && cfg.schedule !== 'alternating' ? new Date().toISOString() : cfg.setupDate,
+                setupWeekMon: setSch === 'alternating' && cfg.schedule !== 'alternating' ? getMondayStr(new Date()) : cfg.setupWeekMon,
+                payDay: parseInt(document.getElementById('s-pay-day').value),
+                workStart: document.getElementById('s-work-start').value, workEnd: document.getElementById('s-work-end').value
+            });
+            closeSettings(); updateStatic();
+        }
+        function resetAll() { if (!confirm('确定重置所有数据？')) return; localStorage.removeItem(KEY); cfg = null; if (timer) clearInterval(timer); showSetup() }
+
+        // ===== App Start =====
+        async function startApp() { updateStatic(); await fetchHolidays(); update(); if (timer) clearInterval(timer); timer = setInterval(update, 100) }
+
+        // ===== Holidays =====
+        async function fetchHolidays() {
+            const y = new Date().getFullYear();
+            try {
+                const r = await fetch(`https://timor.tech/api/holiday/year/${y}/`); if (!r.ok) throw 0;
+                const d = await r.json(); if (d.code === 0 && d.holiday) {
+                    holidays = []; for (const [, v] of Object.entries(d.holiday)) if (v.holiday) holidays.push({ date: v.date, name: v.name });
+                    try { const r2 = await fetch(`https://timor.tech/api/holiday/year/${y + 1}/`); if (r2.ok) { const d2 = await r2.json(); if (d2.code === 0 && d2.holiday) for (const [, v] of Object.entries(d2.holiday)) if (v.holiday) holidays.push({ date: v.date, name: v.name }) } } catch { }
+                    return
+                } throw 0;
+            } catch { holidays = FALLBACK_H }
+        }
+
+        // ===== Static =====
+        function updateStatic() {
+            if (!cfg) return;
+            const ds = cfg.salary / WD[cfg.schedule];
+            const startMs = timeToMs(cfg.workStart), endMs = timeToMs(cfg.workEnd);
+            const hrs = (endMs - startMs) / 3600000;
+            const hr = ds / hrs, mn = hr / 60, sc = mn / 60;
+            document.getElementById('daily-salary').textContent = '¥ ' + ds.toFixed(2);
+            document.getElementById('hourly-salary').textContent = '¥ ' + hr.toFixed(2);
+            document.getElementById('minute-salary').textContent = '¥ ' + mn.toFixed(4);
+            document.getElementById('second-salary').textContent = '¥ ' + sc.toFixed(6);
+            document.getElementById('work-days-month').textContent = WD[cfg.schedule] + ' 天';
+            document.getElementById('work-time-range').textContent = cfg.workStart + ' → ' + cfg.workEnd + ' (' + hrs.toFixed(1) + 'h)';
+            document.getElementById('timeline-start').textContent = cfg.workStart;
+            document.getElementById('timeline-end').textContent = cfg.workEnd;
+            document.getElementById('payday-sub').textContent = '每月' + cfg.payDay + '号';
+            // Rank
+            const rank = RANKS.slice().reverse().find(r => cfg.salary >= r.min) || RANKS[0];
+            document.getElementById('rank-wrap').innerHTML = `<span class="rank-badge ${rank.cls}">${rank.icon} ${rank.name}</span>`;
+        }
+
+        // ===== Main Loop =====
+        function update() {
+            if (!cfg) return;
+            const now = new Date();
+            const todayH = getTodayHoliday(now);
+            const wd = todayH ? false : isWorkDay(now);
+            const startMs = timeToMs(cfg.workStart), endMs = timeToMs(cfg.workEnd);
+            const nowMs = now.getHours() * 3.6e6 + now.getMinutes() * 6e4 + now.getSeconds() * 1e3 + now.getMilliseconds();
+            const ds = cfg.salary / WD[cfg.schedule];
+
+            let status, earned, pct;
+            if (todayH) { status = 'holiday'; earned = 0; pct = 0 }
+            else if (!wd) { status = 'dayoff'; earned = 0; pct = 0 }
+            else if (nowMs < startMs) { status = 'before'; earned = 0; pct = 0 }
+            else if (nowMs >= endMs) { status = 'after'; earned = ds; pct = 100 }
+            else { status = 'working'; const e = nowMs - startMs, t = endMs - startMs; pct = (e / t) * 100; earned = ds * (e / t) }
+
+            // === 金额 ===
+            const ce = document.getElementById('salary-counter');
+            if (status === 'working') { ce.textContent = '¥ ' + earned.toFixed(4); ce.className = 'money-display text-5xl md:text-7xl mb-2' }
+            else if (status === 'after') { ce.textContent = '¥ ' + ds.toFixed(2); ce.className = 'money-display money-done text-5xl md:text-7xl mb-2' }
+            else { ce.textContent = '¥ 0.0000'; ce.className = 'money-display money-zero text-5xl md:text-7xl mb-2' }
+
+            // === Label ===
+            const lb = document.getElementById('salary-label');
+            if (status === 'after') lb.textContent = '✅ TODAY TOTAL';
+            else if (status === 'working') lb.textContent = '💰 EARNING NOW';
+            else if (status === 'holiday') lb.textContent = '🎉 ' + todayH + ' HOLIDAY';
+            else if (status === 'dayoff') lb.textContent = '😴 DAY OFF';
+            else lb.textContent = '⏳ NOT STARTED';
+
+            // === 圆环 ===
+            const circumference = 553;
+            document.getElementById('ring-fill').style.strokeDashoffset = circumference - (pct / 100) * circumference;
+            document.getElementById('ring-fill').style.stroke = status === 'working' ? '#00ff88' : status === 'after' ? '#fbbf24' : '#333';
+            document.getElementById('ring-pct').textContent = pct.toFixed(1) + '%';
+
+            // === Emoji ===
+            const emoji = document.getElementById('worker-emoji');
+            const emojiMap = { working: '🧱', before: '😴', after: '🍻', dayoff: '🎮', holiday: '🎊' };
+            emoji.textContent = emojiMap[status] || '🧱';
+            emoji.className = status === 'working' ? 'worker-emoji text-4xl' : 'worker-emoji-idle text-4xl';
+
+            // === Chip ===
+            const chipMap = { working: ['chip-work', 'WORKING'], before: ['chip-before', 'STANDBY'], after: ['chip-after', 'OFF DUTY'], dayoff: ['chip-off', 'DAY OFF'], holiday: ['chip-holiday', todayH || 'HOLIDAY'] };
+            const [cc, ct] = chipMap[status];
+            document.getElementById('chip-wrap').innerHTML = `<span class="chip ${cc}"><span class="chip-dot"></span>${ct}</span>`;
+
+            // === 倒计时 ===
+            let remain = 0;
+            if (status === 'working') { remain = endMs - nowMs; document.getElementById('cd-label').textContent = '⏰ 距离下班' }
+            else if (status === 'before') { remain = startMs - nowMs; document.getElementById('cd-label').textContent = '😴 距离上班' }
+            else if (status === 'after') { document.getElementById('cd-label').textContent = '🎉 已下班' }
+            else if (status === 'dayoff') { document.getElementById('cd-label').textContent = '🟣 休息日' }
+            else { document.getElementById('cd-label').textContent = '🎊 ' + todayH }
+
+            if (remain > 0) {
+                const h = Math.floor(remain / 3.6e6), m = Math.floor((remain % 3.6e6) / 6e4), s = Math.floor((remain % 6e4) / 1e3);
+                document.getElementById('cd-h').textContent = String(h).padStart(2, '0');
+                document.getElementById('cd-m').textContent = String(m).padStart(2, '0');
+                document.getElementById('cd-s').textContent = String(s).padStart(2, '0');
+            } else {
+                document.getElementById('cd-h').textContent = '00';
+                document.getElementById('cd-m').textContent = '00';
+                document.getElementById('cd-s').textContent = '00';
+            }
+
+            // === 发薪日 ===
+            const pd = daysToPayDay(now);
+            document.getElementById('payday-val').textContent = pd === 0 ? '🤑 今天！' : pd + '天';
+
+            // === 周五 ===
+            const fd = daysToFriday(now);
+            document.getElementById('friday-val').textContent = fd === 0 ? '🥳 今天！' : fd + '天';
+            document.getElementById('friday-sub').textContent = fd === 0 ? '周五快乐' : '' + ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+
+            // === 节假日 ===
+            const nh = getNextHoliday(now);
+            if (nh) { document.getElementById('holiday-val').textContent = nh.days === 0 ? '🎊 今天！' : nh.days + '天'; document.getElementById('holiday-name').textContent = nh.name; document.getElementById('holiday-label').textContent = nh.days === 0 ? '正在放假' : '距' + nh.name }
+            else { document.getElementById('holiday-val').textContent = '--'; document.getElementById('holiday-name').textContent = '暂无' }
+
+            // === 本月已赚 ===
+            const dayOfMonth = now.getDate();
+            const workDaysPassed = Math.min(dayOfMonth, WD[cfg.schedule]);
+            const monthEarned = ds * workDaysPassed;
+            document.getElementById('month-earned').textContent = '¥' + Math.floor(monthEarned).toLocaleString();
+            document.getElementById('month-earned-sub').textContent = '约' + workDaysPassed.toFixed(0) + '个工作日';
+
+            // === Timeline ===
+            document.getElementById('timeline-fill').style.width = pct + '%';
+            document.getElementById('timeline-dot').style.display = pct > 0 && pct < 100 ? 'block' : 'none';
+            if (status === 'working') {
+                const workedH = ((nowMs - startMs) / 3.6e6);
+                const remainH = ((endMs - nowMs) / 3.6e6);
+                document.getElementById('worked-hours').textContent = workedH.toFixed(1) + 'h';
+                document.getElementById('remain-hours').textContent = remainH.toFixed(1) + 'h';
+            } else {
+                const totalH = (endMs - startMs) / 3.6e6;
+                document.getElementById('worked-hours').textContent = status === 'after' ? totalH.toFixed(1) + 'h' : '0h';
+                document.getElementById('remain-hours').textContent = status === 'before' ? totalH.toFixed(1) + 'h' : '0h';
+            }
+
+            // === 摸鱼指数 ===
+            let moyuScore = 0, moyuDesc = '';
+            if (status === 'working') {
+                moyuScore = Math.min(100, Math.floor(pct * 1.2 + (Math.sin(now.getTime() / 5000) * 5)));
+                if (moyuScore < 30) { moyuDesc = '刚开始搬，还早着呢'; document.getElementById('moyu-score').style.color = '#f87171' }
+                else if (moyuScore < 60) { moyuDesc = '搬了一半了，加油'; document.getElementById('moyu-score').style.color = '#fbbf24' }
+                else if (moyuScore < 85) { moyuDesc = '可以开始摸鱼了'; document.getElementById('moyu-score').style.color = '#60a5fa' }
+                else { moyuDesc = '摸鱼大师上线！'; document.getElementById('moyu-score').style.color = '#00ff88' }
+            } else if (status === 'after') { moyuScore = 100; moyuDesc = '满分！已下班！🎉'; document.getElementById('moyu-score').style.color = '#00ff88' }
+            else if (status === 'dayoff' || status === 'holiday') { moyuScore = 100; moyuDesc = '不用搬砖=满分摸鱼'; document.getElementById('moyu-score').style.color = '#c084fc' }
+            else { moyuScore = 0; moyuDesc = '还没上班呢'; document.getElementById('moyu-score').style.color = '#555' }
+            document.getElementById('moyu-score').textContent = moyuScore;
+            document.getElementById('moyu-desc').textContent = moyuDesc;
+            document.getElementById('moyu-bar').style.width = moyuScore + '%';
+
+            // === 语录 ===
+            if (now.getTime() - lastQuoteT > 8000) { lastQuoteT = now.getTime(); updateQuote(now, status, todayH) }
+
+            // === 粒子 ===
+            if (status === 'working' && now.getSeconds() % 3 === 0 && now.getMilliseconds() < 120) spawnSparkle();
+        }
+
+        // ===== Quote =====
+        function updateQuote(now, status, holiday) {
+            let key;
+            if (status === 'holiday') key = 'holiday';
+            else if (status === 'dayoff') key = 'dayoff';
+            else if (status === 'after') key = 'after';
+            else if (status === 'before') key = 'before';
+            else {
+                const h = now.getHours(), sH = parseInt(cfg.workStart), eH = parseInt(cfg.workEnd), mid = sH + (eH - sH) / 2;
+                if (h < sH + 1.5) key = 'early'; else if (h < mid - 1) key = 'mid_am'; else if (h < mid + 0.5) key = 'lunch';
+                else if (h < mid + 2) key = 'afternoon'; else if (h < eH - 1) key = 'mid_pm'; else key = 'almost';
+            }
+            const list = QUOTES[key] || QUOTES.early;
+            document.getElementById('quote-bar').textContent = list[Math.floor(Math.random() * list.length)];
+        }
+
+        // ===== Sparkle =====
+        function spawnSparkle() {
+            const c = document.getElementById('sparkle-container');
+            if (c.children.length > 5) return;
+            const el = document.createElement('i');
+            el.style.left = Math.random() * 100 + '%'; el.style.top = Math.random() * 40 + '%';
+            el.style.animationDelay = Math.random() * 0.3 + 's';
+            c.appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        // ===== Utils =====
+        function timeToMs(t) { const [h, m] = t.split(':').map(Number); return h * 3.6e6 + m * 6e4 }
+        function isWorkDay(d) { const day = d.getDay(); switch (cfg.schedule) { case 'single': return day !== 0; case 'double': return day !== 0 && day !== 6; case 'alternating': return day === 0 ? false : day === 6 ? isBigWeek(d) : true }return true }
+        function isBigWeek(d) { const m1 = getMondayDate(new Date(cfg.setupDate)), m2 = getMondayDate(d); const diff = Math.round((m2 - m1) / (7 * 864e5)); return diff % 2 === 0 ? cfg.weekType === 'big' : cfg.weekType !== 'big' }
+        function getMondayDate(d) { const dt = new Date(d); dt.setHours(0, 0, 0, 0); const day = dt.getDay(); dt.setDate(dt.getDate() + (day === 0 ? -6 : 1 - day)); return dt }
+        function getMondayStr(d) { return getMondayDate(d).toISOString().slice(0, 10) }
+        function daysToPayDay(now) { const t = now.getDate(), p = cfg.payDay; if (t === p) return 0; if (t < p) return p - t; const nx = new Date(now.getFullYear(), now.getMonth() + 1, p); return Math.ceil((nx - new Date(now.getFullYear(), now.getMonth(), t)) / 864e5) }
+        function daysToFriday(now) { const d = now.getDay(); return d === 5 ? 0 : d === 6 ? 6 : d === 0 ? 5 : 5 - d }
+        function getTodayHoliday(now) { const s = fmtDate(now); const h = holidays.find(x => x.date === s); return h ? h.name : null }
+        function getNextHoliday(now) { const ts = fmtDate(now); const seen = {}; for (const h of holidays) if (h.date >= ts && !seen[h.name]) seen[h.name] = h.date; let n = null; for (const [name, date] of Object.entries(seen)) if (!n || date < n.date) n = { name, date }; if (!n) return null; const tgt = new Date(n.date + 'T00:00:00'), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); return { name: n.name, days: Math.max(0, Math.round((tgt - today) / 864e5)) } }
+        function fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
