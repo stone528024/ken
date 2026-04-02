@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 神经元矩阵 | 文档翻译中枢</title>
+    <title>AI 神经元矩阵 | NEXUS AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link
@@ -39,61 +39,28 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 243, 255, 0.05);
         }
 
-        .drop-zone {
+        .nav-item {
             transition: all 0.3s ease;
         }
 
-        .drop-zone.active {
-            border-color: #00f3ff;
-            background-color: rgba(0, 243, 255, 0.05);
-            box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
+        .nav-item.active {
+            background-color: rgba(0, 243, 255, 0.1);
+            color: #00f3ff;
+            border-color: rgba(0, 243, 255, 0.3);
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+        
+        .nav-item:not(.active):hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
-        .scan-line {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: #00f3ff;
-            box-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
-            animation: scan 2s linear infinite;
-            display: none;
-        }
-
-        @keyframes scan {
-            0% {
-                top: 0;
-                opacity: 0;
-            }
-
-            10% {
-                opacity: 1;
-            }
-
-            90% {
-                opacity: 1;
-            }
-
-            100% {
-                top: 100%;
-                opacity: 0;
-            }
-        }
-
-        .terminal-log::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .terminal-log::-webkit-scrollbar-thumb {
-            background: #b53cff;
-            border-radius: 4px;
-        }
     </style>
 </head>
 
 <body class="flex h-screen antialiased">
 
+    <!-- 侧边栏菜单 -->
     <aside class="w-64 glass-panel border-r border-cyber-blue/20 flex flex-col hidden md:flex">
         <div class="p-6 flex items-center gap-3 border-b border-cyber-blue/20">
             <i class="fa-solid fa-microchip text-2xl text-cyber-blue"></i>
@@ -101,199 +68,43 @@
                 class="font-orbitron font-bold text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyber-blue to-cyber-purple">
                 NEXUS AI</h1>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="#"
-                class="flex items-center gap-3 p-3 rounded-lg bg-cyber-blue/10 text-cyber-blue border border-cyber-blue/30"><i
-                    class="fa-solid fa-language"></i><span class="font-bold">文档翻译</span></a>
+        <nav class="flex-1 p-4 space-y-3">
+            <a href="#" onclick="switchTab('translate.html', this)"
+                class="nav-item active flex items-center gap-3 p-3 rounded-lg border border-transparent text-gray-300">
+                <i class="fa-solid fa-language text-lg w-5 text-center"></i>
+                <span class="font-bold">文档翻译</span>
+            </a>
+            
+            <a href="#" onclick="switchTab('image_convert.html', this)"
+                class="nav-item flex items-center gap-3 p-3 rounded-lg border border-transparent text-gray-300">
+                <i class="fa-solid fa-image text-lg w-5 text-center"></i>
+                <span class="font-bold">图片处理</span>
+            </a>
         </nav>
         <div class="p-4 border-t border-cyber-blue/20 text-xs text-gray-500 font-orbitron text-center">
             SYS.STATUS: <span class="text-green-400">ONLINE</span><br>NODE.JS SERVER ACTIVE
         </div>
     </aside>
 
+    <!-- 主内容区：使用 iframe 承载不同模块 -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
-        <header class="h-20 glass-panel border-b border-cyber-blue/20 flex items-center justify-between px-8 z-10">
-            <h2 class="text-2xl font-orbitron font-bold">Document <span class="text-cyber-purple">Translator</span></h2>
-            <div class="flex items-center gap-4">
-                <select id="targetLanguage"
-                    class="bg-black/50 border border-cyber-blue/30 text-cyber-blue rounded px-3 py-1.5 outline-none font-bold">
-                    <option value="zh-CN">简体中文 (Chinese)</option>
-                    <option value="en">English (英语)</option>
-                    <option value="ja">日本語 (Japanese)</option>
-                </select>
-            </div>
-        </header>
-
-        <div class="flex-1 p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto z-10">
-            <!-- 左侧 -->
-            <div class="flex-1 flex flex-col gap-6">
-                <div id="dropZone"
-                    class="drop-zone flex-1 glass-panel rounded-2xl border-2 border-dashed border-gray-600 flex flex-col items-center justify-center relative cursor-pointer group hover:border-cyber-blue/60 overflow-hidden">
-                    <input type="file" id="fileInput" class="hidden" accept=".doc,.docx,.txt" />
-                    <div id="scanLine" class="scan-line"></div>
-
-                    <div id="uploadUI" class="text-center">
-                        <i
-                            class="fa-solid fa-cloud-arrow-up text-6xl text-gray-500 group-hover:text-cyber-blue transition-colors mb-4"></i>
-                        <h3 class="text-xl font-bold mb-2">拖拽文件至此 或 点击上传</h3>
-                        <p class="text-gray-400 text-sm">支持格式: DOCX, DOC, TXT，文件不得超过20MB</p>
-                    </div>
-
-                    <div id="fileInfoUI" class="hidden text-center flex flex-col items-center">
-                        <i class="fa-solid fa-file-lines text-6xl text-cyber-blue mb-4"></i>
-                        <h3 id="fileName" class="text-xl font-bold text-white mb-1"></h3>
-                        <p id="fileSize" class="text-cyber-purple text-sm mb-4 font-orbitron"></p>
-                        <button id="resetBtn"
-                            class="px-4 py-1 rounded-full border border-red-500/50 text-red-400 text-sm">移除</button>
-                    </div>
-                </div>
-
-                <button id="startBtn"
-                    class="w-full py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-cyber-blue/20 to-cyber-purple/20 border border-cyber-blue/50 text-cyber-blue hover:from-cyber-blue hover:to-cyber-purple hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed font-orbitron"
-                    disabled>
-                    <i class="fa-solid fa-bolt mr-2"></i> Start Translation
-                </button>
-            </div>
-
-            <!-- 右侧 -->
-            <div class="flex-1 flex flex-col gap-6">
-                <div class="flex-1 glass-panel rounded-2xl p-6 flex flex-col">
-                    <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-2">
-                        <h3 class="font-orbitron text-cyber-purple font-bold"><i class="fa-solid fa-terminal mr-2"></i>
-                            SERVER LOG</h3>
-                    </div>
-                    <div id="terminalLog"
-                        class="terminal-log flex-1 overflow-y-auto text-sm font-mono text-green-400 space-y-2">
-                        <p>> Server connected. Awaiting payload...</p>
-                    </div>
-                </div>
-
-                <div id="downloadZone"
-                    class="glass-panel rounded-2xl p-6 hidden flex flex-col items-center justify-center border border-green-500/30 bg-green-500/5">
-                    <i class="fa-regular fa-circle-check text-5xl text-green-400 mb-4"></i>
-                    <h3 class="text-xl font-bold mb-2">翻译处理完成</h3>
-                    <p class="text-gray-400 text-sm mb-6">真实文件格式已生成，完美无乱码</p>
-                    <a id="downloadLink" href="#"
-                        class="px-8 py-3 rounded-lg bg-green-500 text-black font-bold hover:bg-green-400 transition-all">
-                        <i class="fa-solid fa-download"></i> 立即下载
-                    </a>
-                </div>
-            </div>
-        </div>
+        <iframe id="mainFrame" name="mainFrame" src="translate.html" class="w-full h-full border-none" title="Main Content"></iframe>
     </main>
 
     <script>
-        // const BACKEND_URL = 'https://stone-nine-xi.vercel.app';
-        const BACKEND_URL = 'http://localhost:3000';
-
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const uploadUI = document.getElementById('uploadUI');
-        const fileInfoUI = document.getElementById('fileInfoUI');
-        const startBtn = document.getElementById('startBtn');
-        const terminalLog = document.getElementById('terminalLog');
-        const scanLine = document.getElementById('scanLine');
-        let currentFile = null;
-
-        function logToTerminal(msg, type = 'info') {
-            const p = document.createElement('p');
-            p.className = type === 'error' ? 'text-red-400' : type === 'warn' ? 'text-yellow-400' : 'text-green-400';
-            p.innerHTML = `<span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> > ${msg}`;
-            terminalLog.appendChild(p);
-            terminalLog.scrollTop = terminalLog.scrollHeight;
+        function switchTab(url, element) {
+            // 移除所有nav-item的active类
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            // 为当前点击的元素添加active类
+            element.classList.add('active');
+            
+            // 切换iframe的内容
+            document.getElementById('mainFrame').src = url;
+            
+            // 如果是移动端，可能还需要在这里添加隐藏侧边栏的逻辑
         }
-
-        dropZone.onclick = (e) => { if (e.target.id !== 'resetBtn') fileInput.click(); };
-        fileInput.onchange = (e) => {
-            currentFile = e.target.files[0];
-            // 如果没选中文件，直接退出
-            if (!currentFile) return;
-
-            // 计算文件大小（转MB）
-            const fileSizeMB = currentFile.size / 1024 / 1024;
-            // 限制20MB
-            const maxSizeMB = 20;
-
-            // 判断文件是否超过大小限制
-            if (fileSizeMB > maxSizeMB) {
-                // 1. 弹出提示
-                alert(`文件大小超出限制！最大支持 ${maxSizeMB}MB，当前文件：${fileSizeMB.toFixed(2)}MB`);
-                // 2. 清空选中的文件（关键：重置文件上传控件）
-                e.target.value = '';
-                currentFile = null;
-                // 3. 恢复上传UI，隐藏文件信息
-                uploadUI.classList.remove('hidden');
-                fileInfoUI.classList.add('hidden');
-                // 4. 禁用开始按钮
-                startBtn.disabled = true;
-                // 5. 终端日志记录
-                logToTerminal(`错误：文件 ${currentFile?.name || '未命名'} 超过${maxSizeMB}MB限制，已取消上传`);
-                return;
-            }
-            document.getElementById('fileName').textContent = currentFile.name;
-            document.getElementById('fileSize').textContent = (currentFile.size / 1024 / 1024).toFixed(2) + ' MB';
-            uploadUI.classList.add('hidden'); fileInfoUI.classList.remove('hidden');
-            startBtn.disabled = false;
-            logToTerminal(`File mounted: ${currentFile.name}`);
-        };
-
-        document.getElementById('resetBtn').onclick = (e) => {
-            e.stopPropagation(); currentFile = null; fileInput.value = '';
-            uploadUI.classList.remove('hidden'); fileInfoUI.classList.add('hidden');
-            startBtn.disabled = true; document.getElementById('downloadZone').classList.add('hidden');
-        };
-
-        startBtn.onclick = async () => {
-            if (!currentFile) return;
-            startBtn.disabled = true;
-            scanLine.style.display = 'block';
-            logToTerminal(`Transmitting file to Node.js Engine...`, 'warn');
-
-            const formData = new FormData();
-            formData.append('file', currentFile);
-            formData.append('targetLanguage', document.getElementById('targetLanguage').value);
-
-            try {
-                // 将文件和参数发送给 Node.js 后端
-                const response = await fetch(`${BACKEND_URL}/api/translate`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error(await response.text());
-
-                logToTerminal('Translation complete. Downloading generated file...', 'highlight');
-
-                // 接收后端生成的真实文件 Blob
-                const blob = await response.blob();
-
-                // 从请求头获取后端生成的新文件名
-                const disposition = response.headers.get('Content-Disposition');
-                let filename = currentFile.name.replace(/\.[^/.]+$/, "") + "_Translated" + currentFile.name.substring(currentFile.name.lastIndexOf('.'));
-                if (disposition && disposition.indexOf('filename=') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches[1]) {
-                        filename = decodeURIComponent(matches[1].replace(/['"]/g, ''));
-                    }
-                }
-
-                const url = window.URL.createObjectURL(blob);
-                const a = document.getElementById('downloadLink');
-                a.href = url;
-                a.download = filename;
-
-                scanLine.style.display = 'none';
-                document.getElementById('downloadZone').classList.remove('hidden');
-                logToTerminal('Task fully completed. System standby.');
-
-            } catch (err) {
-                logToTerminal(`ERROR: ${err.message}`, 'error');
-                scanLine.style.display = 'none';
-            } finally {
-                startBtn.disabled = false;
-            }
-        };
     </script>
 </body>
 

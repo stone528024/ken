@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片格式转换</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+SC:wght@300;400;700&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { orbitron: ['Orbitron', 'sans-serif'], sans: ['Noto Sans SC', 'sans-serif'], },
+                    colors: { cyber: { blue: '#00f3ff', purple: '#b53cff', dark: '#0a0a0f' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: transparent;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 15, 25, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 243, 255, 0.05);
+        }
+
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.active {
+            border-color: #00f3ff;
+            background-color: rgba(0, 243, 255, 0.05);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #b53cff;
+            box-shadow: 0 0 10px #b53cff, 0 0 20px #b53cff;
+            animation: scan 1.5s linear infinite;
+            display: none;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .terminal-log::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .terminal-log::-webkit-scrollbar-thumb {
+            background: #00f3ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen antialiased">
+    <header
+        class="h-20 glass-panel border-b border-cyber-blue/20 flex items-center justify-between px-8 z-10 m-4 rounded-xl">
+        <h2 class="text-2xl font-orbitron font-bold">Image <span class="text-cyber-blue">Converter</span></h2>
+        <div class="flex items-center gap-4">
+            <span class="text-gray-400 font-orbitron text-sm">TARGET FORMAT:</span>
+            <select id="targetFormat"
+                class="bg-black/50 border border-cyber-purple/50 text-cyber-purple rounded px-3 py-1.5 outline-none font-bold uppercase">
+                <option value="webp">WEBP</option>
+                <option value="png">PNG</option>
+                <option value="jpeg">JPG / JPEG</option>
+                <option value="gif">GIF</option>
+                <option value="avif">AVIF</option>
+                <option value="tiff">TIFF</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="flex-1 p-4 lg:p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto z-10">
+        <!-- 左侧 -->
+        <div class="flex-1 flex flex-col gap-6">
+            <div id="dropZone"
+                class="drop-zone flex-1 glass-panel rounded-2xl border-2 border-dashed border-gray-600 flex flex-col items-center justify-center relative cursor-pointer group hover:border-cyber-purple/60 overflow-hidden">
+                <input type="file" id="fileInput" class="hidden" accept="image/*" />
+                <div id="scanLine" class="scan-line"></div>
+
+                <div id="uploadUI" class="text-center">
+                    <i
+                        class="fa-solid fa-images text-6xl text-gray-500 group-hover:text-cyber-purple transition-colors mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">拖拽图片至此 或 点击上传</h3>
+                    <p class="text-gray-400 text-sm">支持常见的图片格式，文件不得超过20MB</p>
+                </div>
+
+                <div id="fileInfoUI" class="hidden text-center flex flex-col items-center">
+                    <img id="imagePreview" src=""
+                        class="max-h-32 mb-4 rounded border border-cyber-purple/30 shadow-lg object-contain hidden" />
+                    <i id="defaultIcon" class="fa-solid fa-image text-6xl text-cyber-purple mb-4 hidden"></i>
+                    <h3 id="fileName" class="text-xl font-bold text-white mb-1"></h3>
+                    <p id="fileSize" class="text-cyber-blue text-sm mb-4 font-orbitron"></p>
+                    <button id="resetBtn"
+                        class="px-4 py-1 rounded-full border border-red-500/50 text-red-400 text-sm hover:bg-red-500/10">重新选择</button>
+                </div>
+            </div>
+
+            <button id="startBtn"
+                class="w-full py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-cyber-purple/20 to-cyber-blue/20 border border-cyber-purple/50 text-cyber-purple hover:from-cyber-purple hover:to-cyber-blue hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed font-orbitron"
+                disabled>
+                <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Start Conversion
+            </button>
+        </div>
+
+        <!-- 右侧 -->
+        <div class="flex-1 flex flex-col gap-6">
+            <div class="flex-1 glass-panel rounded-2xl p-6 flex flex-col">
+                <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-2">
+                    <h3 class="font-orbitron text-cyber-blue font-bold"><i class="fa-solid fa-terminal mr-2"></i>
+                        SYS PROCESS LOG</h3>
+                </div>
+                <div id="terminalLog"
+                    class="terminal-log flex-1 overflow-y-auto text-sm font-mono text-blue-400 space-y-2">
+                    <p>> Image processor initialized. Waiting for input...</p>
+                </div>
+            </div>
+
+            <div id="downloadZone"
+                class="glass-panel rounded-2xl p-6 hidden flex flex-col items-center justify-center border border-green-500/30 bg-green-500/5">
+                <i class="fa-regular fa-circle-check text-5xl text-green-400 mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">图片转换成功</h3>
+                <p class="text-gray-400 text-sm mb-6">格式已转换并重命名</p>
+                <a id="downloadLink" href="#"
+                    class="px-8 py-3 rounded-lg bg-green-500 text-black font-bold hover:bg-green-400 transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)]">
+                    <i class="fa-solid fa-download"></i> 立即下载
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // const BACKEND_URL = 'https://stone-nine-xi.vercel.app';
+        const BACKEND_URL = 'http://localhost:3000';
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadUI = document.getElementById('uploadUI');
+        const fileInfoUI = document.getElementById('fileInfoUI');
+        const startBtn = document.getElementById('startBtn');
+        const terminalLog = document.getElementById('terminalLog');
+        const scanLine = document.getElementById('scanLine');
+        const imagePreview = document.getElementById('imagePreview');
+        const defaultIcon = document.getElementById('defaultIcon');
+        let currentFile = null;
+
+        function logToTerminal(msg, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type === 'error' ? 'text-red-400' : type === 'warn' ? 'text-yellow-400' : 'text-blue-400';
+            p.innerHTML = `<span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> > ${msg}`;
+            terminalLog.appendChild(p);
+            terminalLog.scrollTop = terminalLog.scrollHeight;
+        }
+
+        dropZone.onclick = (e) => { if (e.target.id !== 'resetBtn') fileInput.click(); };
+        fileInput.onchange = (e) => {
+            currentFile = e.target.files[0];
+            if (!currentFile) return;
+
+            if (!currentFile.type.startsWith('image/')) {
+                alert('请上传图片文件！');
+                e.target.value = '';
+                currentFile = null;
+                return;
+            }
+
+            const fileSizeMB = currentFile.size / 1024 / 1024;
+            const maxSizeMB = 20;
+
+            if (fileSizeMB > maxSizeMB) {
+                alert(`文件大小超出限制！最大支持 ${maxSizeMB}MB，当前文件：${fileSizeMB.toFixed(2)}MB`);
+                e.target.value = '';
+                currentFile = null;
+                uploadUI.classList.remove('hidden');
+                fileInfoUI.classList.add('hidden');
+                startBtn.disabled = true;
+                logToTerminal(`错误：文件 ${currentFile?.name || '未命名'} 过大，已取消上传`);
+                return;
+            }
+
+            document.getElementById('fileName').textContent = currentFile.name;
+            document.getElementById('fileSize').textContent = (currentFile.size / 1024 / 1024).toFixed(2) + ' MB';
+
+            // 预览图片
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.classList.remove('hidden');
+                defaultIcon.classList.add('hidden');
+            };
+            reader.readAsDataURL(currentFile);
+
+            uploadUI.classList.add('hidden');
+            fileInfoUI.classList.remove('hidden');
+            startBtn.disabled = false;
+            logToTerminal(`Image loaded: ${currentFile.name}`);
+        };
+
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        };
+        dropZone.ondragleave = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+        };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        };
+
+        document.getElementById('resetBtn').onclick = (e) => {
+            e.stopPropagation();
+            currentFile = null;
+            fileInput.value = '';
+            imagePreview.src = '';
+            uploadUI.classList.remove('hidden');
+            fileInfoUI.classList.add('hidden');
+            startBtn.disabled = true;
+            document.getElementById('downloadZone').classList.add('hidden');
+        };
+
+        startBtn.onclick = async () => {
+            if (!currentFile) return;
+            startBtn.disabled = true;
+            scanLine.style.display = 'block';
+            const targetFormat = document.getElementById('targetFormat').value;
+
+            logToTerminal(`Initiating image transformation to ${targetFormat.toUpperCase()}...`, 'warn');
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            formData.append('targetFormat', targetFormat);
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/image/convert`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    let errMsg = 'Unknown error';
+                    try {
+                        const errObj = await response.json();
+                        errMsg = errObj.error || await response.text();
+                    } catch {
+                        errMsg = await response.text();
+                    }
+                    throw new Error(errMsg);
+                }
+
+                logToTerminal('Image conversion successful. Downloading...', 'highlight');
+
+                const blob = await response.blob();
+
+                // 从请求头获取后端生成的新文件名
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = `converted.${targetFormat}`;
+                if (disposition && disposition.indexOf('filename=') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+                    }
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.getElementById('downloadLink');
+                a.href = url;
+                a.download = filename;
+
+                scanLine.style.display = 'none';
+                document.getElementById('downloadZone').classList.remove('hidden');
+                logToTerminal('Job finished. Ready for next file.', 'info');
+
+            } catch (err) {
+                logToTerminal(`ERROR: ${err.message}`, 'error');
+                scanLine.style.display = 'none';
+            } finally {
+                startBtn.disabled = false;
+            }
+        };
+    </script>
+</body>
+
+</html>

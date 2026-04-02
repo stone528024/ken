@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 // 仅加载翻译路由
 const translateRouter = require('./routes/translate');
+const imageRouter = require('./routes/image');
 
 const app = express();
 
@@ -11,5 +12,7 @@ app.use(express.json());
 
 // 挂载翻译接口
 app.use('/api', translateRouter);
+// 挂载图片转换接口
+app.use('/api/image', imageRouter);
 
 module.exports = app;
