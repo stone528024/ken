@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLE蓝牙广播调试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .control {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #scanBtn {
+            background: #3498db;
+            color: white;
+        }
+
+        #stopBtn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        #clearBtn {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .device-list {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .device-item:last-child {
+            border-bottom: none;
+        }
+
+        .device-name {
+            font-weight: bold;
+            font-size: 17px;
+            color: #2c3e50;
+        }
+
+        .device-info {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+
+        .my-device {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #95a5a5;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2 class="title">BLE蓝牙广播调试工具</h2>
+    <div class="control">
+        <button id="scanBtn">开始扫描蓝牙设备</button>
+        <button id="stopBtn">停止扫描</button>
+        <button id="clearBtn">清空列表</button>
+    </div>
+    <div class="device-list" id="deviceList">
+        <div class="no-data">点击开始扫描，即可查看周边蓝牙广播设备</div>
+    </div>
+
+    <script>
+        // 配置：在这里填写你手机广播的【设备名称/服务UUID】，扫描到会高亮标记
+        const MY_BLE_DEVICE_NAME = "你的手机蓝牙名称"; // 改成你手机广播的名称
+        const MY_BLE_SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb"; // 常用UUID，可改
+
+        let scanActive = false;
+        let deviceList = document.getElementById('deviceList');
+        let scannedDevices = new Set(); // 防止重复显示
+
+        // 开始扫描
+        document.getElementById('scanBtn').addEventListener('click', async () => {
+            if (scanActive) return;
+            scanActive = true;
+            scannedDevices.clear();
+            deviceList.innerHTML = '<div class="no-data">扫描中...</div>';
+
+            try {
+                // 浏览器BLE扫描API（只扫描，不连接，专门看广播）
+                const options = {
+                    acceptAllDevices: true, // 扫描所有设备
+                    optionalServices: [MY_BLE_SERVICE_UUID]
+                };
+
+                // 监听设备发现事件
+                navigator.bluetooth.addEventListener('advertisementreceived', (event) => {
+                    handleDeviceFound(event);
+                });
+
+                // 启动扫描
+                await navigator.bluetooth.requestLEScan(options);
+                console.log('✅ 蓝牙扫描已启动');
+            } catch (err) {
+                deviceList.innerHTML = `<div class="no-data">扫描失败：${err.message}</div>`;
+                scanActive = false;
+            }
+        });
+
+        // 停止扫描
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            if (!scanActive) return;
+            navigator.bluetooth.stopLEScan();
+            scanActive = false;
+            console.log('✅ 蓝牙扫描已停止');
+        });
+
+        // 清空列表
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            deviceList.innerHTML = '<div class="no-data">已清空列表</div>';
+            scannedDevices.clear();
+        });
+
+        // 处理扫描到的设备
+        function handleDeviceFound(event) {
+            const device = event.device;
+            const deviceId = device.id;
+
+            // 去重
+            if (scannedDevices.has(deviceId)) return;
+            scannedDevices.add(deviceId);
+
+            // 解析广播数据
+            const deviceName = device.name || '未知设备';
+            const rssi = event.rssi; // 信号强度
+            const uuids = event.uuids.join(', ') || '无UUID';
+
+            // 解析广播包数据（核心！你发的指令就在这里）
+            let manufacturerData = '无厂商数据';
+            let serviceData = '无服务数据';
+
+            if (event.manufacturerData.size > 0) {
+                for (let [key, value] of event.manufacturerData) {
+                    manufacturerData = `0x${key.toString(16)}: ${buf2hex(value)}`;
+                }
+            }
+
+            if (event.serviceData.size > 0) {
+                for (let [key, value] of event.serviceData) {
+                    serviceData = `${key}: ${buf2hex(value)}`;
+                }
+            }
+
+            // 判断是否是你的手机设备（高亮）
+            const isMyDevice = deviceName.includes(MY_BLE_DEVICE_NAME) || uuids.includes(MY_BLE_SERVICE_UUID);
+
+            // 渲染到页面
+            renderDevice(deviceName, deviceId, rssi, uuids, manufacturerData, serviceData, isMyDevice);
+        }
+
+        // 渲染设备信息
+        function renderDevice(name, id, rssi, uuids, mData, sData, isMyDevice) {
+            if (deviceList.querySelector('.no-data')) {
+                deviceList.innerHTML = '';
+            }
+
+            const item = document.createElement('div');
+            item.className = `device-item ${isMyDevice ? 'my-device' : ''}`;
+
+            item.innerHTML = `
+                <div class="device-name">${isMyDevice ? '🟢 我的设备：' : '🔵 '}${name}</div>
+                <div class="device-info">
+                    设备ID：${id}<br>
+                    信号强度：${rssi} dBm<br>
+                    服务UUID：${uuids}<br>
+                    厂商广播数据：${mData}<br>
+                    服务广播数据：${sData}
+                </div>
+            `;
+
+            deviceList.appendChild(item);
+        }
+
+        // 二进制转十六进制（查看广播指令核心）
+        function buf2hex(buffer) {
+            return [...new Uint8Array(buffer)]
+                .map(x => x.toString(16).padStart(2, '0'))
+                .join(' ')
+                .toUpperCase();
+        }
+    </script>
+</body>
+
+</html>
