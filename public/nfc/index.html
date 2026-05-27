@@ -4,39 +4,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>正在打开App...</title>
-
-  <script>
-
-    // 获取参数
-    const params = new URLSearchParams(location.search)
-
-    const id = params.get('id') || ''
-
-    // 安卓 Deep Link
-    const schemeUrl =
-      `myapp://nfc?id=${id}`
-
-    // 尝试打开 App
-    window.location.href = schemeUrl
-
-    // 安卓未安装兜底
-    setTimeout(() => {
-
-      document.getElementById('tip').style.display = 'block'
-
-    }, 2000)
-
-  </script>
 </head>
 
 <body>
 
-  <div id="tip" style="display:none;text-align:center;margin-top:100px;">
-    <h2>未检测到App</h2>
-
-    <a href="你的下载地址">
-      下载App
-    </a>
+  <div style="
+      text-align:center;
+      margin-top:100px;
+      font-size:18px;
+    ">
+    正在打开 App...
   </div>
 
 </body>
