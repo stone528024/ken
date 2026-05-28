@@ -1,14 +1,11 @@
 {
     "applinks": {
+        "apps": [],
         "details": [
             {
-                "appIDs": [
-                    "SVXUCM5T6T.com.siusiu.app"
-                ],
-                "components": [
-                    {
-                        "/": "/nfc/*"
-                    }
+                "appID": "SVXUCM5T6T.com.siusiu.app",
+                "paths": [
+                    "/nfc/*"
                 ]
             }
         ]
