@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>快乐8 模拟系统 - 动态规则与机选</title>
+    <title>快乐8 模拟系统 - 选号与机选复制</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 自定义动画与样式 */
+        /* 动画与交互样式 */
         .ball {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -59,7 +59,39 @@
             }
         }
 
-        /* 隐藏滚动条但保留功能 */
+        /* Toast 提示框动画 */
+        .toast-enter {
+            animation: toastSlideDown 0.3s ease forwards;
+        }
+
+        .toast-leave {
+            animation: toastSlideUp 0.3s ease forwards;
+        }
+
+        @keyframes toastSlideDown {
+            from {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 20px);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideUp {
+            from {
+                transform: translate(-50%, 20px);
+                opacity: 1;
+            }
+
+            to {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+        }
+
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -72,6 +104,15 @@
 </head>
 
 <body class="bg-gray-100 text-gray-800 font-sans pb-24 lg:pb-8">
+
+    <!-- 全局 Toast 提示 -->
+    <div id="toast"
+        class="fixed top-0 left-1/2 -translate-x-1/2 -translate-y-full opacity-0 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[100] flex items-center gap-2 transition-all">
+        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span id="toastMsg" class="text-sm font-medium">复制成功</span>
+    </div>
 
     <!-- 顶部导航 -->
     <header class="bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg sticky top-0 z-50">
@@ -117,11 +158,7 @@
                     <div class="flex gap-4 text-sm">
                         <label class="flex items-center gap-1 cursor-pointer">
                             <input type="radio" name="mode" value="single" checked
-                                class="text-red-600 focus:ring-red-500 w-4 h-4"> 单式
-                        </label>
-                        <label class="flex items-center gap-1 cursor-pointer">
-                            <input type="radio" name="mode" value="multiple"
-                                class="text-red-600 focus:ring-red-500 w-4 h-4"> 复式
+                                class="text-red-600 focus:ring-red-500 w-4 h-4"> 单/复式
                         </label>
                         <label class="flex items-center gap-1 cursor-pointer">
                             <input type="radio" name="mode" value="dantuo"
@@ -152,7 +189,7 @@
                 <!-- 号码盘 1-80 -->
                 <div class="flex justify-center">
                     <div id="numberGrid" class="grid grid-cols-10 gap-1.5 sm:gap-2 mb-2 w-full max-w-[500px]">
-                        <!-- JS动态生成80个球 -->
+                        <!-- JS动态生成 -->
                     </div>
                 </div>
 
@@ -183,8 +220,14 @@
 
                 <!-- 机选结果展示 -->
                 <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 min-h-[200px]">
-                    <h4 class="text-sm font-bold text-gray-500 mb-3 border-b pb-2">机选结果 <span id="randomTotalInfo"
-                            class="text-red-500 float-right"></span></h4>
+                    <div class="flex justify-between items-center border-b pb-2 mb-3">
+                        <h4 class="text-sm font-bold text-gray-500">机选结果 <span id="randomTotalInfo"
+                                class="text-red-500 ml-2"></span></h4>
+                        <button id="btnCopyRandom"
+                            class="text-xs bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-100 hidden">
+                            复制机选
+                        </button>
+                    </div>
                     <ul id="randomResultList" class="space-y-3">
                         <li class="text-center text-gray-400 text-sm py-10">点击上方按钮生成号码</li>
                     </ul>
@@ -197,7 +240,7 @@
             <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                 <h3 class="text-base font-bold text-gray-800 border-b pb-2 mb-3">快乐8 简介</h3>
                 <p class="text-xs text-gray-600 leading-relaxed">
-                    从 1 至 80 共八十个号码中任意选择一至十个号码进行投注，每期随机开出 <strong>20</strong> 个开奖号码。<br>
+                    从 1 至 80 中选择一至十个号码投注，每期开出 <strong>20</strong> 个开奖号码。<br>
                     全对有大奖，不中也有奖（选七/八/九/十）。单注金额 2 元。
                 </p>
             </div>
@@ -224,7 +267,7 @@
 
     </main>
 
-    <!-- 底部悬浮结算栏 (主要针对手动选号) -->
+    <!-- 底部悬浮结算栏 (手动选号用) -->
     <div id="bottomBar"
         class="fixed bottom-0 left-0 w-full bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 transition-transform duration-300">
         <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
@@ -240,9 +283,14 @@
                     <span class="text-gray-800 text-sm ml-2">金额：<span id="betCost"
                             class="text-red-600 font-bold text-xl px-1">0</span> 元</span>
                 </div>
-                <button
-                    class="bg-red-500 text-white px-5 py-2 rounded font-bold shadow-md hover:bg-red-600 active:scale-95 transition-all text-sm">
-                    模拟投注
+                <button id="btnCopyManual"
+                    class="bg-red-500 text-white px-5 py-2 rounded font-bold shadow-md hover:bg-red-600 active:scale-95 transition-all text-sm flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    复制选号
                 </button>
             </div>
         </div>
@@ -263,40 +311,59 @@
             1: [{ match: '中1', prize: '4.6元' }]
         };
 
-        // ----------------- DOM 元素 -----------------
+        // ----------------- DOM 与 状态 -----------------
         const playTypeSelect = document.getElementById('playType');
         const modeRadios = document.getElementsByName('mode');
         const dtRadios = document.getElementsByName('dtType');
         const numberGrid = document.getElementById('numberGrid');
-
-        // 规则表
-        const ruleTitle = document.getElementById('ruleTitle');
         const prizeTableBody = document.getElementById('prizeTableBody');
 
-        // 提示与统计
-        const instructionText = document.getElementById('instructionText');
-        const betCountEl = document.getElementById('betCount');
-        const betCostEl = document.getElementById('betCost');
-        const bottomBar = document.getElementById('bottomBar');
-
-        // Tabs & 面板
-        const tabManual = document.getElementById('tab-manual');
-        const tabRandom = document.getElementById('tab-random');
-        const panelManual = document.getElementById('panel-manual');
-        const panelRandom = document.getElementById('panel-random');
-
-        // 机选
-        const btnGenerate = document.getElementById('btnGenerate');
-        const randomCountSelect = document.getElementById('randomCount');
-        const randomResultList = document.getElementById('randomResultList');
-        const randomTotalInfo = document.getElementById('randomTotalInfo');
-
-        // 状态变量
         let selectedNumbers = [];
         let bankerNumbers = [];
-        let currentTab = 'manual';
+        let currentRandomResults = []; // 用于存储机选数组方便复制
+        let currentBets = 0;
 
-        // ----------------- 核心数学计算 -----------------
+        // ----------------- 通用功能：Toast & 复制 -----------------
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = message;
+            toast.classList.remove('opacity-0', 'toast-leave');
+            toast.classList.add('toast-enter');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-leave');
+            }, 2000);
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => showToast('已成功复制到剪贴板！'));
+            } else {
+                // 兼容老版本浏览器
+                let textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('已成功复制到剪贴板！');
+                } catch (err) {
+                    alert('复制失败，请手动选择复制');
+                }
+                textArea.remove();
+            }
+        }
+
+        // 格式化数字 (如 5 -> '05')
+        const fmt = (num) => num < 10 ? '0' + num : num.toString();
+
+        // ----------------- 界面与逻辑 -----------------
         function getCombinations(n, m) {
             if (m > n || m < 0) return 0;
             if (m === 0 || m === n) return 1;
@@ -306,60 +373,43 @@
             return c;
         }
 
-        // ----------------- 界面更新功能 -----------------
-        // 更新奖金规则表
         function updatePrizeTable(playType) {
-            ruleTitle.innerText = `选${playType} 玩法`;
+            document.getElementById('ruleTitle').innerText = `选${playType} 玩法`;
             prizeTableBody.innerHTML = '';
-
-            const rules = prizeData[playType];
-            rules.forEach((rule, index) => {
-                let delay = index * 50; // 阶梯动画延迟
+            prizeData[playType].forEach((rule, index) => {
                 let row = document.createElement('tr');
                 row.className = 'hover:bg-red-50 transition-colors fade-in';
-                row.style.animationDelay = `${delay}ms`;
-                row.innerHTML = `
-                    <td class="py-2 px-2 font-medium ${index === 0 ? 'text-red-600' : ''}">${rule.match}</td>
-                    <td class="py-2 px-2 text-right ${index === 0 ? 'font-bold text-red-600' : ''}">${rule.prize}</td>
-                `;
+                row.style.animationDelay = `${index * 50}ms`;
+                row.innerHTML = `<td class="py-2 px-2 font-medium ${index === 0 ? 'text-red-600' : ''}">${rule.match}</td>
+                                 <td class="py-2 px-2 text-right ${index === 0 ? 'font-bold text-red-600' : ''}">${rule.prize}</td>`;
                 prizeTableBody.appendChild(row);
             });
         }
 
-        // Tab 切换逻辑
         window.switchTab = function (tab) {
-            currentTab = tab;
+            const manualBtn = document.getElementById('tab-manual');
+            const randomBtn = document.getElementById('tab-random');
             if (tab === 'manual') {
-                tabManual.classList.replace('text-gray-500', 'text-red-600');
-                tabManual.classList.replace('hover:text-gray-700', 'bg-red-50');
-                tabRandom.classList.replace('text-red-600', 'text-gray-500');
-                tabRandom.classList.remove('bg-red-50');
-
-                panelManual.classList.remove('hidden');
-                panelRandom.classList.add('hidden');
-                bottomBar.style.transform = 'translateY(0)'; // 显示底部栏
+                manualBtn.classList.replace('text-gray-500', 'text-red-600'); manualBtn.classList.add('bg-red-50');
+                randomBtn.classList.replace('text-red-600', 'text-gray-500'); randomBtn.classList.remove('bg-red-50');
+                document.getElementById('panel-manual').classList.remove('hidden');
+                document.getElementById('panel-random').classList.add('hidden');
+                document.getElementById('bottomBar').style.transform = 'translateY(0)';
             } else {
-                tabRandom.classList.replace('text-gray-500', 'text-red-600');
-                tabRandom.classList.replace('hover:text-gray-700', 'bg-red-50');
-                tabManual.classList.replace('text-red-600', 'text-gray-500');
-                tabManual.classList.remove('bg-red-50');
-
-                panelRandom.classList.remove('hidden');
-                panelManual.classList.add('hidden');
-                bottomBar.style.transform = 'translateY(100%)'; // 隐藏底部栏
+                randomBtn.classList.replace('text-gray-500', 'text-red-600'); randomBtn.classList.add('bg-red-50');
+                manualBtn.classList.replace('text-red-600', 'text-gray-500'); manualBtn.classList.remove('bg-red-50');
+                document.getElementById('panel-random').classList.remove('hidden');
+                document.getElementById('panel-manual').classList.add('hidden');
+                document.getElementById('bottomBar').style.transform = 'translateY(100%)';
             }
         }
 
-        // 初始化手动选号盘
         function initGrid() {
             numberGrid.innerHTML = '';
             for (let i = 1; i <= 80; i++) {
-                let num = i < 10 ? '0' + i : i.toString();
                 let btn = document.createElement('button');
-                // 响应式球体大小：手机端约 28px (w-7 h-7), 电脑端 36px (w-9 h-9)
                 btn.className = 'ball w-7 h-7 sm:w-9 sm:h-9 text-xs sm:text-sm rounded-full border border-gray-300 font-semibold text-gray-700 hover:bg-red-50 focus:outline-none flex items-center justify-center bg-white';
-                btn.innerText = num;
-                btn.dataset.num = i;
+                btn.innerText = fmt(i);
                 btn.onclick = () => handleNumberClick(i, btn);
                 numberGrid.appendChild(btn);
             }
@@ -367,175 +417,172 @@
 
         function getCurrentSettings() {
             let mode = 'single';
-            modeRadios.forEach(radio => { if (radio.checked) mode = radio.value; });
+            modeRadios.forEach(r => { if (r.checked) mode = r.value; });
             let dtType = 'banker';
-            dtRadios.forEach(radio => { if (radio.checked) dtType = radio.value; });
-            return { playType: parseInt(playTypeSelect.value), mode: mode, dtType: dtType };
+            dtRadios.forEach(r => { if (r.checked) dtType = r.value; });
+            return { playType: parseInt(playTypeSelect.value), mode, dtType };
         }
 
-        // 处理点击球
-        function handleNumberClick(num, btnElement) {
-            const settings = getCurrentSettings();
-            const N = settings.playType;
+        function handleNumberClick(num, btn) {
+            const s = getCurrentSettings();
+            const N = s.playType;
+            btn.classList.remove('ball-pop'); void btn.offsetWidth; // trigger reflow
 
-            // 移除重新添加动画类名实现每次点击都Q弹
-            btnElement.classList.remove('ball-pop');
-            void btnElement.offsetWidth; // 触发重绘
-
-            if (settings.mode === 'single' || settings.mode === 'multiple') {
+            if (s.mode === 'single') {
                 if (selectedNumbers.includes(num)) {
                     selectedNumbers = selectedNumbers.filter(n => n !== num);
-                    btnElement.classList.remove('selected');
+                    btn.classList.remove('selected');
                 } else {
-                    let maxSelect = settings.mode === 'single' ? N : N + 10;
-                    if (selectedNumbers.length >= maxSelect) {
-                        alert(`当前模式最多只能选择 ${maxSelect} 个号码！`);
-                        return;
-                    }
+                    let max = N + 10; // 单/复式合并，最大允许多选10个
+                    if (selectedNumbers.length >= max) { alert(`最多只能选择 ${max} 个号码！`); return; }
                     selectedNumbers.push(num);
-                    btnElement.classList.add('selected');
+                    btn.classList.add('selected');
                 }
-            } else if (settings.mode === 'dantuo') {
+            } else if (s.mode === 'dantuo') {
                 if (bankerNumbers.includes(num)) {
-                    bankerNumbers = bankerNumbers.filter(n => n !== num);
-                    btnElement.classList.remove('banker');
+                    bankerNumbers = bankerNumbers.filter(n => n !== num); btn.classList.remove('banker');
                 } else if (selectedNumbers.includes(num)) {
-                    selectedNumbers = selectedNumbers.filter(n => n !== num);
-                    btnElement.classList.remove('selected');
+                    selectedNumbers = selectedNumbers.filter(n => n !== num); btn.classList.remove('selected');
                 } else {
-                    if (settings.dtType === 'banker') {
-                        if (bankerNumbers.length >= N - 1) {
-                            alert(`选${N}玩法，最多只能设置 ${N - 1} 个胆码！`); return;
-                        }
-                        bankerNumbers.push(num);
-                        btnElement.classList.add('banker');
+                    if (s.dtType === 'banker') {
+                        if (bankerNumbers.length >= N - 1) { alert(`最多设置 ${N - 1} 个胆码！`); return; }
+                        bankerNumbers.push(num); btn.classList.add('banker');
                     } else {
-                        if (selectedNumbers.length >= 20) {
-                            alert('拖码最多选择20个！'); return;
-                        }
-                        selectedNumbers.push(num);
-                        btnElement.classList.add('selected');
+                        if (selectedNumbers.length >= 20) { alert('拖码最多选择20个！'); return; }
+                        selectedNumbers.push(num); btn.classList.add('selected');
                     }
                 }
             }
             calculateBets();
         }
 
-        // 计算注数
         function calculateBets() {
-            const settings = getCurrentSettings();
-            const N = settings.playType;
-            let bets = 0;
+            const s = getCurrentSettings();
+            const N = s.playType;
+            currentBets = 0;
 
-            if (settings.mode === 'single') {
-                if (selectedNumbers.length === N) bets = 1;
-            } else if (settings.mode === 'multiple') {
-                if (selectedNumbers.length >= N) {
-                    bets = getCombinations(selectedNumbers.length, N);
-                }
-            } else if (settings.mode === 'dantuo') {
-                let d = bankerNumbers.length;
-                let t = selectedNumbers.length;
-                if (d > 0 && d < N && (d + t) >= N) {
-                    bets = getCombinations(t, N - d);
-                }
+            if (s.mode === 'single') {
+                if (selectedNumbers.length >= N) currentBets = getCombinations(selectedNumbers.length, N);
+            } else if (s.mode === 'dantuo') {
+                let d = bankerNumbers.length, t = selectedNumbers.length;
+                if (d > 0 && d < N && (d + t) >= N) currentBets = getCombinations(t, N - d);
             }
-            betCountEl.innerText = bets;
-            betCostEl.innerText = bets * 2;
+            document.getElementById('betCount').innerText = currentBets;
+            document.getElementById('betCost').innerText = currentBets * 2;
         }
 
-        // 更新玩法提示
         function updateInstructions() {
-            const settings = getCurrentSettings();
-            const N = settings.playType;
+            const s = getCurrentSettings();
+            const N = s.playType;
             const dtControls = document.getElementById('dantuoControls');
 
-            if (settings.mode === 'single') {
-                instructionText.innerHTML = `单式投注：请选择正好 <span class="text-red-500 font-bold">${N}</span> 个号码。`;
-                dtControls.classList.add('hidden');
-            } else if (settings.mode === 'multiple') {
-                instructionText.innerHTML = `复式投注：请选择 <span class="text-red-500 font-bold">${N + 1} 到 ${N + 10}</span> 个号码。`;
-                dtControls.classList.add('hidden');
-            } else if (settings.mode === 'dantuo') {
-                instructionText.innerHTML = `胆拖投注：胆码必出 (最多 <span class="text-green-600 font-bold">${N - 1}</span> 个)，拖码与胆码组合总数需超过 ${N} 个。`;
-                dtControls.classList.remove('hidden');
-                dtControls.classList.add('flex');
+            if (s.mode === 'single') {
+                document.getElementById('instructionText').innerHTML = `普通投注：请选择 <span class="text-red-500 font-bold">${N} 到 ${N + 10}</span> 个号码（超过${N}个即为复式）。`;
+                dtControls.classList.add('hidden'); dtControls.classList.remove('flex');
+            } else {
+                document.getElementById('instructionText').innerHTML = `胆拖投注：胆码最多选 <span class="text-green-600 font-bold">${N - 1}</span> 个，总数需超过 ${N} 个。`;
+                dtControls.classList.remove('hidden'); dtControls.classList.add('flex');
             }
         }
 
-        // 清空状态
         function clearAll() {
-            selectedNumbers = [];
-            bankerNumbers = [];
-            document.querySelectorAll('.ball').forEach(btn => {
-                btn.classList.remove('selected', 'banker');
-            });
+            selectedNumbers = []; bankerNumbers = []; currentBets = 0;
+            document.querySelectorAll('.ball').forEach(btn => btn.classList.remove('selected', 'banker'));
             calculateBets();
         }
 
-        // ----------------- 机选逻辑 -----------------
+        // ----------------- 生成机选 -----------------
         function generateRandom() {
             const N = parseInt(playTypeSelect.value);
-            const count = parseInt(randomCountSelect.value);
+            const count = parseInt(document.getElementById('randomCount').value);
+            const list = document.getElementById('randomResultList');
+            const btn = document.getElementById('btnGenerate');
+            const btnCopy = document.getElementById('btnCopyRandom');
 
-            randomResultList.innerHTML = '';
-            randomTotalInfo.innerText = `共 ${count} 注，金额 ${count * 2} 元`;
+            list.innerHTML = '';
+            document.getElementById('randomTotalInfo').innerText = `(${count}注/${count * 2}元)`;
+            currentRandomResults = [];
 
-            // 禁用按钮防连点
-            btnGenerate.disabled = true;
-            btnGenerate.innerHTML = '生成中...';
+            btn.disabled = true; btn.innerHTML = '生成中...';
+            btnCopy.classList.add('hidden'); // 隐藏复制按钮
 
             setTimeout(() => {
                 for (let i = 0; i < count; i++) {
-                    // 生成1-80并洗牌截取N个
                     let pool = Array.from({ length: 80 }, (_, k) => k + 1);
                     for (let j = pool.length - 1; j > 0; j--) {
                         const r = Math.floor(Math.random() * (j + 1));
                         [pool[j], pool[r]] = [pool[r], pool[j]];
                     }
                     let result = pool.slice(0, N).sort((a, b) => a - b);
+                    currentRandomResults.push(result); // 保存供复制用
 
-                    // 渲染单行
                     let li = document.createElement('li');
                     li.className = 'flex items-center gap-2 fade-in bg-white p-2 sm:p-3 rounded border border-gray-100 shadow-sm';
-                    li.style.animationDelay = `${i * 100}ms`; // 瀑布流动画
+                    li.style.animationDelay = `${i * 80}ms`;
 
-                    let numHtml = result.map(n => {
-                        let str = n < 10 ? '0' + n : n;
-                        return `<span class="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-red-50 text-red-600 font-bold rounded-full text-xs sm:text-sm border border-red-100">${str}</span>`;
-                    }).join('');
-
+                    let numHtml = result.map(n => `<span class="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-red-50 text-red-600 font-bold rounded-full text-xs sm:text-sm border border-red-100">${fmt(n)}</span>`).join('');
                     li.innerHTML = `<span class="text-xs text-gray-400 w-4">${i + 1}.</span> <div class="flex flex-wrap gap-1">${numHtml}</div>`;
-                    randomResultList.appendChild(li);
+                    list.appendChild(li);
                 }
-                btnGenerate.disabled = false;
-                btnGenerate.innerHTML = '立即机选';
+                btn.disabled = false; btn.innerHTML = '立即机选';
+                btnCopy.classList.remove('hidden'); // 显示复制按钮
             }, 100);
         }
 
-        // ----------------- 事件监听注册 -----------------
-        playTypeSelect.addEventListener('change', (e) => {
-            clearAll();
-            updateInstructions();
-            updatePrizeTable(e.target.value);
-            // 切换玩法时清空机选列表
-            randomResultList.innerHTML = '<li class="text-center text-gray-400 text-sm py-10">已切换玩法，请重新生成号码</li>';
-            randomTotalInfo.innerText = '';
+        // ----------------- 复制逻辑 -----------------
+        // 复制手动选号
+        document.getElementById('btnCopyManual').addEventListener('click', () => {
+            if (currentBets === 0) {
+                alert('注数为 0，请先选择足够的号码！');
+                return;
+            }
+            const s = getCurrentSettings();
+            let text = `【快乐8 - 选${s.playType}】`;
+
+            if (s.mode === 'single') {
+                let isFushi = selectedNumbers.length > s.playType;
+                text += `${isFushi ? '复式' : '单式'}投注\n`;
+                text += `号码：${selectedNumbers.sort((a, b) => a - b).map(fmt).join(' ')}\n`;
+            } else {
+                text += `胆拖投注\n`;
+                text += `(胆) ${bankerNumbers.sort((a, b) => a - b).map(fmt).join(' ')}\n`;
+                text += `(拖) ${selectedNumbers.sort((a, b) => a - b).map(fmt).join(' ')}\n`;
+            }
+            text += `--------------------\n共 ${currentBets} 注，金额 ${currentBets * 2} 元`;
+
+            copyToClipboard(text);
         });
 
-        modeRadios.forEach(radio => radio.addEventListener('change', () => {
-            clearAll();
-            updateInstructions();
-        }));
+        // 复制机选号码
+        document.getElementById('btnCopyRandom').addEventListener('click', () => {
+            if (currentRandomResults.length === 0) return;
+            const N = playTypeSelect.value;
+            let text = `【快乐8 - 选${N}】机选 ${currentRandomResults.length} 注\n`;
+            text += `--------------------\n`;
 
+            currentRandomResults.forEach((arr, idx) => {
+                text += `第${idx + 1}注：${arr.map(fmt).join(' ')}\n`;
+            });
+            text += `--------------------\n总计金额：${currentRandomResults.length * 2} 元`;
+
+            copyToClipboard(text);
+        });
+
+        // ----------------- 事件注册 -----------------
+        playTypeSelect.addEventListener('change', (e) => {
+            clearAll(); updateInstructions(); updatePrizeTable(e.target.value);
+            document.getElementById('randomResultList').innerHTML = '<li class="text-center text-gray-400 text-sm py-10">已切换玩法，请重新生成号码</li>';
+            document.getElementById('randomTotalInfo').innerText = '';
+            document.getElementById('btnCopyRandom').classList.add('hidden');
+        });
+
+        modeRadios.forEach(r => r.addEventListener('change', () => { clearAll(); updateInstructions(); }));
         document.getElementById('btnClearDesktop').addEventListener('click', clearAll);
         document.getElementById('btnClearMobile').addEventListener('click', clearAll);
-        btnGenerate.addEventListener('click', generateRandom);
+        document.getElementById('btnGenerate').addEventListener('click', generateRandom);
 
-        // 初始化
-        initGrid();
-        updateInstructions();
-        updatePrizeTable(10); // 默认选十
+        // Init
+        initGrid(); updateInstructions(); updatePrizeTable(10);
 
     </script>
 </body>
