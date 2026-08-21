@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>快乐8 模拟系统 - 动态规则与机选</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定义动画与样式 */
+        .ball {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ball:active {
+            transform: scale(0.9);
+        }
+
+        .ball.selected {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+            animation: pop 0.3s ease-out;
+        }
+
+        .ball.banker {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+            animation: pop 0.3s ease-out;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.25);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 隐藏滚动条但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800 font-sans pb-24 lg:pb-8">
+
+    <!-- 顶部导航 -->
+    <header class="bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wider">快乐8 模拟系统</h1>
+            <div class="flex items-center gap-2">
+                <span class="text-sm bg-red-700/50 px-3 py-1 rounded-full border border-red-400">玩法：</span>
+                <select id="playType"
+                    class="bg-white text-red-600 font-bold border-0 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-white">
+                    <option value="10" selected>选十</option>
+                    <option value="9">选九</option>
+                    <option value="8">选八</option>
+                    <option value="7">选七</option>
+                    <option value="6">选六</option>
+                    <option value="5">选五</option>
+                    <option value="4">选四</option>
+                    <option value="3">选三</option>
+                    <option value="2">选二</option>
+                    <option value="1">选一</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- 左侧：操作区域 -->
+        <div class="lg:col-span-2 space-y-4">
+
+            <!-- 模式切换 Tabs -->
+            <div class="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                <button onclick="switchTab('manual')" id="tab-manual"
+                    class="flex-1 py-2 text-sm font-bold rounded-md bg-red-50 text-red-600 transition-colors">手动选号</button>
+                <button onclick="switchTab('random')" id="tab-random"
+                    class="flex-1 py-2 text-sm font-bold rounded-md text-gray-500 hover:text-gray-700 transition-colors">机选号码</button>
+            </div>
+
+            <!-- ================= 手动选号面板 ================= -->
+            <div id="panel-manual" class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 fade-in">
+
+                <div class="flex flex-wrap items-center gap-4 mb-4">
+                    <label class="font-bold text-gray-700 text-sm">投注方式：</label>
+                    <div class="flex gap-4 text-sm">
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="mode" value="single" checked
+                                class="text-red-600 focus:ring-red-500 w-4 h-4"> 单式
+                        </label>
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="mode" value="multiple"
+                                class="text-red-600 focus:ring-red-500 w-4 h-4"> 复式
+                        </label>
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="mode" value="dantuo"
+                                class="text-red-600 focus:ring-red-500 w-4 h-4"> 胆拖
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 胆拖控制台 -->
+                <div id="dantuoControls"
+                    class="hidden mb-4 p-3 bg-green-50 rounded-lg border border-green-200 flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
+                    <span class="text-green-800 font-medium">当前操作：</span>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-1 cursor-pointer font-bold text-green-600">
+                            <input type="radio" name="dtType" value="banker" checked
+                                class="text-green-500 focus:ring-green-500 w-4 h-4"> 设胆码 (必出)
+                        </label>
+                        <label class="flex items-center gap-1 cursor-pointer font-bold text-red-500">
+                            <input type="radio" name="dtType" value="player"
+                                class="text-red-500 focus:ring-red-500 w-4 h-4"> 设拖码
+                        </label>
+                    </div>
+                </div>
+
+                <div class="text-xs sm:text-sm text-gray-500 mb-4 bg-gray-50 p-2 rounded" id="instructionText">请选择号码。
+                </div>
+
+                <!-- 号码盘 1-80 -->
+                <div class="flex justify-center">
+                    <div id="numberGrid" class="grid grid-cols-10 gap-1.5 sm:gap-2 mb-2 w-full max-w-[500px]">
+                        <!-- JS动态生成80个球 -->
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-end lg:hidden">
+                    <button id="btnClearMobile"
+                        class="text-sm text-gray-500 border border-gray-300 px-3 py-1.5 rounded active:bg-gray-100">清空选号</button>
+                </div>
+            </div>
+
+            <!-- ================= 机选号码面板 ================= -->
+            <div id="panel-random"
+                class="hidden bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 fade-in">
+                <div class="flex flex-col sm:flex-row gap-4 items-end mb-6">
+                    <div class="w-full sm:w-auto">
+                        <label class="block font-bold text-gray-700 text-sm mb-2">生成注数：</label>
+                        <select id="randomCount"
+                            class="w-full sm:w-32 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <option value="1">1 注</option>
+                            <option value="5" selected>5 注</option>
+                            <option value="10">10 注</option>
+                        </select>
+                    </div>
+                    <button id="btnGenerate"
+                        class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-md shadow-md transition-all active:scale-95 text-sm">
+                        立即机选
+                    </button>
+                </div>
+
+                <!-- 机选结果展示 -->
+                <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 min-h-[200px]">
+                    <h4 class="text-sm font-bold text-gray-500 mb-3 border-b pb-2">机选结果 <span id="randomTotalInfo"
+                            class="text-red-500 float-right"></span></h4>
+                    <ul id="randomResultList" class="space-y-3">
+                        <li class="text-center text-gray-400 text-sm py-10">点击上方按钮生成号码</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：动态规则说明 -->
+        <div class="space-y-4">
+            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="text-base font-bold text-gray-800 border-b pb-2 mb-3">快乐8 简介</h3>
+                <p class="text-xs text-gray-600 leading-relaxed">
+                    从 1 至 80 共八十个号码中任意选择一至十个号码进行投注，每期随机开出 <strong>20</strong> 个开奖号码。<br>
+                    全对有大奖，不中也有奖（选七/八/九/十）。单注金额 2 元。
+                </p>
+            </div>
+
+            <!-- 动态奖金表 -->
+            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-red-500 fade-in">
+                <h3 class="text-base font-bold text-gray-800 pb-2 mb-2 flex justify-between items-center">
+                    <span>中奖规则</span>
+                    <span id="ruleTitle" class="text-red-500 text-sm bg-red-50 px-2 py-1 rounded">选十 玩法</span>
+                </h3>
+                <table class="w-full text-sm text-left text-gray-600">
+                    <thead class="bg-gray-50 text-gray-700">
+                        <tr>
+                            <th class="py-2 px-2 rounded-tl-md">中奖条件</th>
+                            <th class="py-2 px-2 text-right rounded-tr-md">单注奖金</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prizeTableBody" class="divide-y divide-gray-100">
+                        <!-- JS 动态填入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 底部悬浮结算栏 (主要针对手动选号) -->
+    <div id="bottomBar"
+        class="fixed bottom-0 left-0 w-full bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 transition-transform duration-300">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <button id="btnClearDesktop"
+                class="hidden lg:block text-sm text-gray-500 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition">清空选号</button>
+            <div class="text-xs text-gray-500 lg:hidden">
+                请核对金额
+            </div>
+            <div class="text-right flex items-center gap-4">
+                <div>
+                    <span class="text-gray-800 text-sm">共 <span id="betCount"
+                            class="text-red-600 font-bold text-xl px-1">0</span> 注</span>
+                    <span class="text-gray-800 text-sm ml-2">金额：<span id="betCost"
+                            class="text-red-600 font-bold text-xl px-1">0</span> 元</span>
+                </div>
+                <button
+                    class="bg-red-500 text-white px-5 py-2 rounded font-bold shadow-md hover:bg-red-600 active:scale-95 transition-all text-sm">
+                    模拟投注
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ----------------- 数据：各玩法奖金规则 -----------------
+        const prizeData = {
+            10: [{ match: '中10', prize: '最高500万' }, { match: '中9', prize: '8000元' }, { match: '中8', prize: '800元' }, { match: '中7', prize: '80元' }, { match: '中6', prize: '5元' }, { match: '中5', prize: '3元' }, { match: '全不中', prize: '2元' }],
+            9: [{ match: '中9', prize: '30万元' }, { match: '中8', prize: '2000元' }, { match: '中7', prize: '200元' }, { match: '中6', prize: '20元' }, { match: '中5', prize: '5元' }, { match: '中4', prize: '3元' }, { match: '全不中', prize: '2元' }],
+            8: [{ match: '中8', prize: '5万元' }, { match: '中7', prize: '800元' }, { match: '中6', prize: '88元' }, { match: '中5', prize: '10元' }, { match: '中4', prize: '3元' }, { match: '全不中', prize: '2元' }],
+            7: [{ match: '中7', prize: '1万元' }, { match: '中6', prize: '288元' }, { match: '中5', prize: '28元' }, { match: '中4', prize: '4元' }, { match: '全不中', prize: '2元' }],
+            6: [{ match: '中6', prize: '3000元' }, { match: '中5', prize: '30元' }, { match: '中4', prize: '10元' }, { match: '中3', prize: '3元' }],
+            5: [{ match: '中5', prize: '1000元' }, { match: '中4', prize: '21元' }, { match: '中3', prize: '3元' }],
+            4: [{ match: '中4', prize: '100元' }, { match: '中3', prize: '3元' }, { match: '中2', prize: '2元' }],
+            3: [{ match: '中3', prize: '53元' }, { match: '中2', prize: '2元' }],
+            2: [{ match: '中2', prize: '19元' }],
+            1: [{ match: '中1', prize: '4.6元' }]
+        };
+
+        // ----------------- DOM 元素 -----------------
+        const playTypeSelect = document.getElementById('playType');
+        const modeRadios = document.getElementsByName('mode');
+        const dtRadios = document.getElementsByName('dtType');
+        const numberGrid = document.getElementById('numberGrid');
+
+        // 规则表
+        const ruleTitle = document.getElementById('ruleTitle');
+        const prizeTableBody = document.getElementById('prizeTableBody');
+
+        // 提示与统计
+        const instructionText = document.getElementById('instructionText');
+        const betCountEl = document.getElementById('betCount');
+        const betCostEl = document.getElementById('betCost');
+        const bottomBar = document.getElementById('bottomBar');
+
+        // Tabs & 面板
+        const tabManual = document.getElementById('tab-manual');
+        const tabRandom = document.getElementById('tab-random');
+        const panelManual = document.getElementById('panel-manual');
+        const panelRandom = document.getElementById('panel-random');
+
+        // 机选
+        const btnGenerate = document.getElementById('btnGenerate');
+        const randomCountSelect = document.getElementById('randomCount');
+        const randomResultList = document.getElementById('randomResultList');
+        const randomTotalInfo = document.getElementById('randomTotalInfo');
+
+        // 状态变量
+        let selectedNumbers = [];
+        let bankerNumbers = [];
+        let currentTab = 'manual';
+
+        // ----------------- 核心数学计算 -----------------
+        function getCombinations(n, m) {
+            if (m > n || m < 0) return 0;
+            if (m === 0 || m === n) return 1;
+            if (m > n / 2) m = n - m;
+            let c = 1;
+            for (let i = 1; i <= m; i++) c = c * (n - i + 1) / i;
+            return c;
+        }
+
+        // ----------------- 界面更新功能 -----------------
+        // 更新奖金规则表
+        function updatePrizeTable(playType) {
+            ruleTitle.innerText = `选${playType} 玩法`;
+            prizeTableBody.innerHTML = '';
+
+            const rules = prizeData[playType];
+            rules.forEach((rule, index) => {
+                let delay = index * 50; // 阶梯动画延迟
+                let row = document.createElement('tr');
+                row.className = 'hover:bg-red-50 transition-colors fade-in';
+                row.style.animationDelay = `${delay}ms`;
+                row.innerHTML = `
+                    <td class="py-2 px-2 font-medium ${index === 0 ? 'text-red-600' : ''}">${rule.match}</td>
+                    <td class="py-2 px-2 text-right ${index === 0 ? 'font-bold text-red-600' : ''}">${rule.prize}</td>
+                `;
+                prizeTableBody.appendChild(row);
+            });
+        }
+
+        // Tab 切换逻辑
+        window.switchTab = function (tab) {
+            currentTab = tab;
+            if (tab === 'manual') {
+                tabManual.classList.replace('text-gray-500', 'text-red-600');
+                tabManual.classList.replace('hover:text-gray-700', 'bg-red-50');
+                tabRandom.classList.replace('text-red-600', 'text-gray-500');
+                tabRandom.classList.remove('bg-red-50');
+
+                panelManual.classList.remove('hidden');
+                panelRandom.classList.add('hidden');
+                bottomBar.style.transform = 'translateY(0)'; // 显示底部栏
+            } else {
+                tabRandom.classList.replace('text-gray-500', 'text-red-600');
+                tabRandom.classList.replace('hover:text-gray-700', 'bg-red-50');
+                tabManual.classList.replace('text-red-600', 'text-gray-500');
+                tabManual.classList.remove('bg-red-50');
+
+                panelRandom.classList.remove('hidden');
+                panelManual.classList.add('hidden');
+                bottomBar.style.transform = 'translateY(100%)'; // 隐藏底部栏
+            }
+        }
+
+        // 初始化手动选号盘
+        function initGrid() {
+            numberGrid.innerHTML = '';
+            for (let i = 1; i <= 80; i++) {
+                let num = i < 10 ? '0' + i : i.toString();
+                let btn = document.createElement('button');
+                // 响应式球体大小：手机端约 28px (w-7 h-7), 电脑端 36px (w-9 h-9)
+                btn.className = 'ball w-7 h-7 sm:w-9 sm:h-9 text-xs sm:text-sm rounded-full border border-gray-300 font-semibold text-gray-700 hover:bg-red-50 focus:outline-none flex items-center justify-center bg-white';
+                btn.innerText = num;
+                btn.dataset.num = i;
+                btn.onclick = () => handleNumberClick(i, btn);
+                numberGrid.appendChild(btn);
+            }
+        }
+
+        function getCurrentSettings() {
+            let mode = 'single';
+            modeRadios.forEach(radio => { if (radio.checked) mode = radio.value; });
+            let dtType = 'banker';
+            dtRadios.forEach(radio => { if (radio.checked) dtType = radio.value; });
+            return { playType: parseInt(playTypeSelect.value), mode: mode, dtType: dtType };
+        }
+
+        // 处理点击球
+        function handleNumberClick(num, btnElement) {
+            const settings = getCurrentSettings();
+            const N = settings.playType;
+
+            // 移除重新添加动画类名实现每次点击都Q弹
+            btnElement.classList.remove('ball-pop');
+            void btnElement.offsetWidth; // 触发重绘
+
+            if (settings.mode === 'single' || settings.mode === 'multiple') {
+                if (selectedNumbers.includes(num)) {
+                    selectedNumbers = selectedNumbers.filter(n => n !== num);
+                    btnElement.classList.remove('selected');
+                } else {
+                    let maxSelect = settings.mode === 'single' ? N : N + 10;
+                    if (selectedNumbers.length >= maxSelect) {
+                        alert(`当前模式最多只能选择 ${maxSelect} 个号码！`);
+                        return;
+                    }
+                    selectedNumbers.push(num);
+                    btnElement.classList.add('selected');
+                }
+            } else if (settings.mode === 'dantuo') {
+                if (bankerNumbers.includes(num)) {
+                    bankerNumbers = bankerNumbers.filter(n => n !== num);
+                    btnElement.classList.remove('banker');
+                } else if (selectedNumbers.includes(num)) {
+                    selectedNumbers = selectedNumbers.filter(n => n !== num);
+                    btnElement.classList.remove('selected');
+                } else {
+                    if (settings.dtType === 'banker') {
+                        if (bankerNumbers.length >= N - 1) {
+                            alert(`选${N}玩法，最多只能设置 ${N - 1} 个胆码！`); return;
+                        }
+                        bankerNumbers.push(num);
+                        btnElement.classList.add('banker');
+                    } else {
+                        if (selectedNumbers.length >= 20) {
+                            alert('拖码最多选择20个！'); return;
+                        }
+                        selectedNumbers.push(num);
+                        btnElement.classList.add('selected');
+                    }
+                }
+            }
+            calculateBets();
+        }
+
+        // 计算注数
+        function calculateBets() {
+            const settings = getCurrentSettings();
+            const N = settings.playType;
+            let bets = 0;
+
+            if (settings.mode === 'single') {
+                if (selectedNumbers.length === N) bets = 1;
+            } else if (settings.mode === 'multiple') {
+                if (selectedNumbers.length >= N) {
+                    bets = getCombinations(selectedNumbers.length, N);
+                }
+            } else if (settings.mode === 'dantuo') {
+                let d = bankerNumbers.length;
+                let t = selectedNumbers.length;
+                if (d > 0 && d < N && (d + t) >= N) {
+                    bets = getCombinations(t, N - d);
+                }
+            }
+            betCountEl.innerText = bets;
+            betCostEl.innerText = bets * 2;
+        }
+
+        // 更新玩法提示
+        function updateInstructions() {
+            const settings = getCurrentSettings();
+            const N = settings.playType;
+            const dtControls = document.getElementById('dantuoControls');
+
+            if (settings.mode === 'single') {
+                instructionText.innerHTML = `单式投注：请选择正好 <span class="text-red-500 font-bold">${N}</span> 个号码。`;
+                dtControls.classList.add('hidden');
+            } else if (settings.mode === 'multiple') {
+                instructionText.innerHTML = `复式投注：请选择 <span class="text-red-500 font-bold">${N + 1} 到 ${N + 10}</span> 个号码。`;
+                dtControls.classList.add('hidden');
+            } else if (settings.mode === 'dantuo') {
+                instructionText.innerHTML = `胆拖投注：胆码必出 (最多 <span class="text-green-600 font-bold">${N - 1}</span> 个)，拖码与胆码组合总数需超过 ${N} 个。`;
+                dtControls.classList.remove('hidden');
+                dtControls.classList.add('flex');
+            }
+        }
+
+        // 清空状态
+        function clearAll() {
+            selectedNumbers = [];
+            bankerNumbers = [];
+            document.querySelectorAll('.ball').forEach(btn => {
+                btn.classList.remove('selected', 'banker');
+            });
+            calculateBets();
+        }
+
+        // ----------------- 机选逻辑 -----------------
+        function generateRandom() {
+            const N = parseInt(playTypeSelect.value);
+            const count = parseInt(randomCountSelect.value);
+
+            randomResultList.innerHTML = '';
+            randomTotalInfo.innerText = `共 ${count} 注，金额 ${count * 2} 元`;
+
+            // 禁用按钮防连点
+            btnGenerate.disabled = true;
+            btnGenerate.innerHTML = '生成中...';
+
+            setTimeout(() => {
+                for (let i = 0; i < count; i++) {
+                    // 生成1-80并洗牌截取N个
+                    let pool = Array.from({ length: 80 }, (_, k) => k + 1);
+                    for (let j = pool.length - 1; j > 0; j--) {
+                        const r = Math.floor(Math.random() * (j + 1));
+                        [pool[j], pool[r]] = [pool[r], pool[j]];
+                    }
+                    let result = pool.slice(0, N).sort((a, b) => a - b);
+
+                    // 渲染单行
+                    let li = document.createElement('li');
+                    li.className = 'flex items-center gap-2 fade-in bg-white p-2 sm:p-3 rounded border border-gray-100 shadow-sm';
+                    li.style.animationDelay = `${i * 100}ms`; // 瀑布流动画
+
+                    let numHtml = result.map(n => {
+                        let str = n < 10 ? '0' + n : n;
+                        return `<span class="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-red-50 text-red-600 font-bold rounded-full text-xs sm:text-sm border border-red-100">${str}</span>`;
+                    }).join('');
+
+                    li.innerHTML = `<span class="text-xs text-gray-400 w-4">${i + 1}.</span> <div class="flex flex-wrap gap-1">${numHtml}</div>`;
+                    randomResultList.appendChild(li);
+                }
+                btnGenerate.disabled = false;
+                btnGenerate.innerHTML = '立即机选';
+            }, 100);
+        }
+
+        // ----------------- 事件监听注册 -----------------
+        playTypeSelect.addEventListener('change', (e) => {
+            clearAll();
+            updateInstructions();
+            updatePrizeTable(e.target.value);
+            // 切换玩法时清空机选列表
+            randomResultList.innerHTML = '<li class="text-center text-gray-400 text-sm py-10">已切换玩法，请重新生成号码</li>';
+            randomTotalInfo.innerText = '';
+        });
+
+        modeRadios.forEach(radio => radio.addEventListener('change', () => {
+            clearAll();
+            updateInstructions();
+        }));
+
+        document.getElementById('btnClearDesktop').addEventListener('click', clearAll);
+        document.getElementById('btnClearMobile').addEventListener('click', clearAll);
+        btnGenerate.addEventListener('click', generateRandom);
+
+        // 初始化
+        initGrid();
+        updateInstructions();
+        updatePrizeTable(10); // 默认选十
+
+    </script>
+</body>
+
+</html>
